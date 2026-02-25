@@ -1,0 +1,283 @@
+/* ===================================
+   DATA GRIDS / TABELAS
+   Estilo C# / Windows Forms
+   =================================== */
+
+/* Toolbar acima da tabela */
+.grid-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.grid-search {
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+    position: relative;
+}
+
+.grid-search input {
+    width: 100%;
+    padding: 8px 35px 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+}
+
+.grid-search i {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+
+.grid-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Tabela principal */
+.data-grid {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+}
+
+.data-grid thead {
+    background: linear-gradient(180deg, #F8F8F8 0%, #ECECEC 100%);
+    border-bottom: 2px solid var(--primary-orange);
+}
+
+.data-grid th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--primary-brown);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.data-grid th.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 25px;
+}
+
+.data-grid th.sortable:hover {
+    background-color: rgba(255, 140, 0, 0.1);
+}
+
+.data-grid th.sortable::after {
+    content: '⇅';
+    position: absolute;
+    right: 8px;
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.data-grid th.sortable.asc::after {
+    content: '▲';
+    color: var(--primary-orange);
+}
+
+.data-grid th.sortable.desc::after {
+    content: '▼';
+    color: var(--primary-orange);
+}
+
+.data-grid tbody tr {
+    border-bottom: 1px solid #E8E8E8;
+    transition: background-color 0.2s;
+}
+
+/* Zebra striping */
+.data-grid tbody tr:nth-child(even) {
+    background-color: #FAFAFA;
+}
+
+.data-grid tbody tr:hover {
+    background-color: rgba(255, 140, 0, 0.08);
+    cursor: pointer;
+}
+
+.data-grid td {
+    padding: 12px 15px;
+    color: var(--text-primary);
+}
+
+.data-grid td.actions {
+    white-space: nowrap;
+    text-align: center;
+}
+
+.data-grid td.actions button {
+    margin: 0 3px;
+}
+
+/* Células especiais */
+.data-grid td.status {
+    font-weight: 500;
+}
+
+.data-grid td.currency {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+.data-grid td.date {
+    white-space: nowrap;
+}
+
+/* Empty state */
+.grid-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+}
+
+.grid-empty i {
+    font-size: 48px;
+    color: var(--text-light);
+    margin-bottom: 15px;
+}
+
+.grid-empty p {
+    font-size: 16px;
+}
+
+/* Paginação */
+.grid-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 15px 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.pagination-info {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.page-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    background-color: white;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+
+.page-btn:hover:not(:disabled) {
+    background-color: var(--primary-orange);
+    color: white;
+    border-color: var(--primary-orange);
+}
+
+.page-btn.active {
+    background-color: var(--primary-orange);
+    color: white;
+    border-color: var(--primary-orange);
+    font-weight: 600;
+}
+
+.page-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Action Buttons na grid */
+.btn-icon {
+    padding: 6px 10px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 3px;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.btn-icon:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.btn-icon.edit {
+    color: var(--info);
+}
+
+.btn-icon.edit:hover {
+    background-color: rgba(23, 162, 184, 0.1);
+}
+
+.btn-icon.delete {
+    color: var(--danger);
+}
+
+.btn-icon.delete:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.btn-icon.view {
+    color: var(--primary-orange);
+}
+
+.btn-icon.view:hover {
+    background-color: rgba(255, 140, 0, 0.1);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .data-grid {
+        font-size: 12px;
+    }
+
+    .data-grid th,
+    .data-grid td {
+        padding: 8px 10px;
+    }
+
+    .grid-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .grid-search {
+        max-width: 100%;
+    }
+}
+
+/* Scroll horizontal para tabelas grandes */
+.grid-container {
+    overflow-x: auto;
+    margin: 0 -20px;
+    padding: 0 20px;
+}
+
+.grid-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.grid-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.grid-container::-webkit-scrollbar-thumb {
+    background: var(--primary-bronze);
+    border-radius: 4px;
+}

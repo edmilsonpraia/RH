@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal do Colaborador - COPIA GROUP</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/grids.css">
+</head>
+<body>
+    <!-- Botão Hamburger para Mobile -->
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <!-- Overlay para Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="assets/LOGO.png" alt="COPIA GROUP">
+                <h2>Portal do Colaborador</h2>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-module="home">
+                    <i>🏠</i> Início
+                </div>
+                <div class="nav-item" data-module="profile">
+                    <i>👤</i> Meu Perfil
+                </div>
+                <div class="nav-item" data-module="attendance">
+                    <i>🕐</i> Assiduidade
+                </div>
+                <div class="nav-item" data-module="leave">
+                    <i>🏖️</i> Férias
+                </div>
+                <div class="nav-item" data-module="payslips">
+                    <i>💰</i> Recibos de Vencimento
+                </div>
+                <div class="nav-item" data-module="performance">
+                    <i>⭐</i> Avaliações
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div>
+                        <strong id="userName">Utilizador</strong>
+                        <p style="font-size: 12px; color: #999;">Colaborador</p>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-sm btn-block" onclick="AUTH.logout()">
+                    Sair
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1 id="pageTitle">Bem-vindo</h1>
+                <div class="header-actions">
+                    <span id="currentDate"></span>
+                </div>
+            </header>
+
+            <div class="content" id="mainContent">
+                <!-- Home Module -->
+                <div id="homeModule">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon orange">🕐</div>
+                            <div class="stat-info">
+                                <h3 id="todayStatus">-</h3>
+                                <p>Estado Hoje</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon brown">📅</div>
+                            <div class="stat-info">
+                                <h3 id="leaveBalance">0</h3>
+                                <p>Dias de Férias</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon success">⏱️</div>
+                            <div class="stat-info">
+                                <h3 id="hoursWorked">0h</h3>
+                                <p>Horas Este Mês</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Ações Rápidas</h2>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <button class="btn btn-success" onclick="USER.checkIn()">
+                                    ✓ Registar Entrada
+                                </button>
+                                <button class="btn btn-danger" onclick="USER.checkOut()">
+                                    ✗ Registar Saída
+                                </button>
+                                <button class="btn btn-primary" onclick="USER.requestLeave()">
+                                    🏖️ Solicitar Férias
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Meus Dados</h2>
+                        </div>
+                        <div class="card-body" id="profileData">
+                            <p>A carregar...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outros módulos -->
+                <div id="profileModule" class="hidden"></div>
+                <div id="attendanceModule" class="hidden"></div>
+                <div id="leaveModule" class="hidden"></div>
+                <div id="payslipsModule" class="hidden"></div>
+                <div id="performanceModule" class="hidden"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/user-modules.js"></script>
+
+    <script>
+        const USER = {
+            async checkIn() {
+                try {
+                    UI.showLoading();
+                    const result = await API.attendance.checkIn();
+                    UI.hideLoading();
+                    UI.showToast(`Entrada registada às ${result.checkIn}`, 'success');
+                    loadHomeData();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showToast(error.message, 'error');
+                }
+            },
+
+            async checkOut() {
+                try {
+                    UI.showLoading();
+                    const result = await API.attendance.checkOut();
+                    UI.hideLoading();
+                    UI.showToast(`Saída registada às ${result.checkOut}. Horas trabalhadas: ${result.hoursWorked}h`, 'success');
+                    loadHomeData();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showToast(error.message, 'error');
+                }
+            },
+
+            requestLeave() {
+                const content = `
+                    <form id="leaveForm">
+                        <div class="form-group">
+                            <label class="form-label">Data de Início</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data de Fim</label>
+                            <input type="date" class="form-control" id="endDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Motivo (opcional)</label>
+                            <textarea class="form-control" id="reason"></textarea>
+                        </div>
+                    </form>
+                `;
+
+                const footer = `
+                    <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="USER.submitLeaveRequest()">Enviar Pedido</button>
+                `;
+
+                UI.createModal('Solicitar Férias', content, footer);
+            },
+
+            async submitLeaveRequest() {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const reason = document.getElementById('reason').value;
+
+                if (!startDate || !endDate) {
+                    UI.showToast('Por favor, preencha as datas', 'error');
+                    return;
+                }
+
+                try {
+                    UI.showLoading();
+                    await API.attendance.requestLeave({ startDate, endDate, reason });
+                    UI.hideLoading();
+                    UI.closeModal();
+                    UI.showToast('Pedido de férias enviado com sucesso', 'success');
+                    loadHomeData();
+                } catch (error) {
+                    UI.hideLoading();
+                    UI.showToast(error.message, 'error');
+                }
+            }
+        };
+
+        async function loadHomeData() {
+            try {
+                const user = AUTH.getUser();
+
+                // Carregar perfil
+                if (user.employeeId) {
+                    const employee = await API.employees.getById(user.employeeId);
+                    displayProfile(employee);
+
+                    // Assiduidade hoje
+                    const today = new Date();
+                    const attendance = await API.attendance.getAll({
+                        month: today.getMonth() + 1,
+                        year: today.getFullYear()
+                    });
+
+                    const todayDate = today.toISOString().split('T')[0];
+                    const todayAttendance = attendance.find(a => a.date === todayDate);
+
+                    if (todayAttendance) {
+                        document.getElementById('todayStatus').textContent = todayAttendance.check_out ? 'Saída Registada' : 'Presente';
+                    } else {
+                        document.getElementById('todayStatus').textContent = 'Não Registado';
+                    }
+
+                    // Horas trabalhadas no mês
+                    const totalHours = attendance.reduce((sum, a) => sum + (a.hours_worked || 0), 0);
+                    document.getElementById('hoursWorked').textContent = `${totalHours.toFixed(1)}h`;
+
+                    // Saldo de férias (exemplo: 22 dias/ano)
+                    const leaveRequests = await API.attendance.getLeaveRequests();
+                    const usedDays = leaveRequests
+                        .filter(l => l.status === 'aprovado')
+                        .reduce((sum, l) => sum + l.days, 0);
+                    const balance = 22 - usedDays;
+                    document.getElementById('leaveBalance').textContent = balance;
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+            }
+        }
+
+        function displayProfile(employee) {
+            const html = `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                    <div><strong>Nome:</strong> ${employee.name}</div>
+                    <div><strong>Email:</strong> ${employee.email}</div>
+                    <div><strong>Cargo:</strong> ${employee.position}</div>
+                    <div><strong>Departamento:</strong> ${employee.department}</div>
+                    <div><strong>Data de Admissão:</strong> ${UI.formatDate(employee.hire_date)}</div>
+                    <div><strong>Telefone:</strong> ${employee.phone || '-'}</div>
+                </div>
+            `;
+            document.getElementById('profileData').innerHTML = html;
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = AUTH.getUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.username;
+                document.getElementById('userAvatar').textContent = user.username[0].toUpperCase();
+            }
+
+            // Data atual
+            const updateDate = () => {
+                const now = new Date();
+                document.getElementById('currentDate').textContent = now.toLocaleDateString('pt-PT', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            };
+            updateDate();
+            setInterval(updateDate, 60000);
+
+            // Carregar dados
+            loadHomeData();
+
+            // Navegação
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const module = item.getAttribute('data-module');
+                    navigateToModule(module);
+                });
+            });
+        });
+
+        function navigateToModule(module) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-module') === module) {
+                    item.classList.add('active');
+                }
+            });
+
+            document.querySelectorAll('[id$="Module"]').forEach(mod => {
+                mod.classList.add('hidden');
+            });
+
+            document.getElementById(`${module}Module`).classList.remove('hidden');
+
+            const titles = {
+                'home': 'Bem-vindo',
+                'profile': 'Meu Perfil',
+                'attendance': 'Minha Assiduidade',
+                'leave': 'Minhas Férias',
+                'payslips': 'Recibos de Vencimento',
+                'performance': 'Minhas Avaliações'
+            };
+            document.getElementById('pageTitle').textContent = titles[module];
+
+            // Carregar módulo se existir
+            if (module !== 'home' && USER_MODULES[module] && typeof USER_MODULES[module].load === 'function') {
+                USER_MODULES[module].load();
+            } else if (module === 'home') {
+                loadHomeData();
+            }
+        }
+
+        // ===================================
+        // SIDEBAR MOBILE - TOGGLE
+        // ===================================
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggle = document.getElementById('menuToggle');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+            toggle.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggle = document.getElementById('menuToggle');
+
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            toggle.classList.remove('active');
+        }
+
+        // Fechar sidebar ao clicar em item do menu (mobile)
+        document.addEventListener('DOMContentLoaded', () => {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        closeSidebar();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

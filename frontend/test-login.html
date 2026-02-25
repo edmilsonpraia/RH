@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste de Login - Debug</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #8B4513; margin-top: 0; }
+        h2 { color: #A0522D; font-size: 18px; }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #FF8C00;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #E67E00;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid #ddd;
+        }
+        .success { color: #28A745; font-weight: bold; }
+        .error { color: #DC3545; font-weight: bold; }
+        .info {
+            background: #E3F2FD;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #FFF3CD;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Login - Diagnóstico Completo</h1>
+
+    <div class="card">
+        <h2>📋 Credenciais de Teste</h2>
+        <div class="info">
+            <strong>Admin:</strong><br>
+            Username: <code>admin</code><br>
+            Password: <code>admin123</code>
+        </div>
+        <div class="warning">
+            <strong>Usuário Regular:</strong><br>
+            Username: <code>joao.silva</code><br>
+            Password: <code>123456</code>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🔐 Testar Login</h2>
+        <form id="testForm">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="username" value="joao.silva" placeholder="Digite o username">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="password" value="123456" placeholder="Digite a password">
+            </div>
+            <button type="submit">🚀 Testar Login</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>📊 Resultado do Teste</h2>
+        <div id="result"></div>
+    </div>
+
+    <div class="card">
+        <h2>🔍 Detalhes Técnicos</h2>
+        <div id="details"></div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            const detailsDiv = document.getElementById('details');
+
+            resultDiv.innerHTML = '<p>⏳ Testando...</p>';
+            detailsDiv.innerHTML = '';
+
+            const startTime = Date.now();
+
+            try {
+                console.log('🚀 Iniciando teste de login...');
+                console.log('Username:', username);
+                console.log('Password length:', password.length);
+
+                const requestBody = { username, password };
+                console.log('Request body:', requestBody);
+
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', [...response.headers.entries()]);
+
+                let data;
+                const contentType = response.headers.get('content-type');
+
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    console.error('Response is not JSON:', text);
+                    throw new Error('Servidor retornou HTML ao invés de JSON');
+                }
+
+                console.log('Response data:', data);
+
+                // Mostrar resultado
+                if (response.ok && data.token) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ LOGIN SUCESSO!</p>
+                        <p><strong>Duração:</strong> ${duration}ms</p>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Role:</strong> ${data.user.role}</p>
+                        <p><strong>Username:</strong> ${data.user.username}</p>
+                        <p><strong>Employee ID:</strong> ${data.user.employeeId || 'N/A'}</p>
+                        <p><strong>Token:</strong> ${data.token.substring(0, 50)}...</p>
+                    `;
+
+                    // Testar salvar no localStorage
+                    try {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        resultDiv.innerHTML += '<p class="success">✅ Token salvo no localStorage</p>';
+                    } catch (e) {
+                        resultDiv.innerHTML += `<p class="error">❌ Erro ao salvar no localStorage: ${e.message}</p>`;
+                    }
+
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ LOGIN FALHOU!</p>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Erro:</strong> ${data.error || 'Erro desconhecido'}</p>
+                        <p><strong>Duração:</strong> ${duration}ms</p>
+                    `;
+                }
+
+                // Mostrar detalhes técnicos
+                detailsDiv.innerHTML = `
+                    <h3>Request:</h3>
+                    <pre>${JSON.stringify({
+                        url: `${window.location.origin}${API_URL}/auth/login`,
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: requestBody
+                    }, null, 2)}</pre>
+
+                    <h3>Response:</h3>
+                    <pre>${JSON.stringify({
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: Object.fromEntries([...response.headers.entries()]),
+                        data: data
+                    }, null, 2)}</pre>
+
+                    <h3>Browser Info:</h3>
+                    <pre>${JSON.stringify({
+                        userAgent: navigator.userAgent,
+                        url: window.location.href,
+                        localStorage: {
+                            token: localStorage.getItem('token') ? 'SET' : 'NOT SET',
+                            user: localStorage.getItem('user') ? 'SET' : 'NOT SET'
+                        }
+                    }, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                console.error('❌ Erro no teste:', error);
+
+                resultDiv.innerHTML = `
+                    <p class="error">❌ ERRO DE CONEXÃO!</p>
+                    <p><strong>Erro:</strong> ${error.message}</p>
+                    <p><strong>Duração:</strong> ${duration}ms</p>
+                `;
+
+                detailsDiv.innerHTML = `
+                    <h3>Erro:</h3>
+                    <pre>${error.stack || error.message}</pre>
+                `;
+            }
+        });
+
+        // Auto-executar teste ao carregar
+        window.addEventListener('load', () => {
+            console.log('🔄 Página carregada. Você pode clicar em "Testar Login" para fazer o teste.');
+        });
+    </script>
+</body>
+</html>

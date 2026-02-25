@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Sistema RH COPIA GROUP</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/grids.css">
+</head>
+<body>
+    <!-- Botão Hamburger para Mobile -->
+    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <!-- Overlay para Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="assets/LOGO.png" alt="COPIA GROUP">
+                <h2>Sistema de RH</h2>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-module="dashboard">
+                    <i>📊</i> Dashboard
+                </div>
+                <div class="nav-item" data-module="employees">
+                    <i>👥</i> Colaboradores
+                </div>
+                <div class="nav-item" data-module="users">
+                    <i>🔐</i> Utilizadores
+                </div>
+                <div class="nav-item" data-module="attendance">
+                    <i>🕐</i> Assiduidade
+                </div>
+                <div class="nav-item" data-module="leave">
+                    <i>🏖️</i> Férias
+                </div>
+                <div class="nav-item" data-module="recruitment">
+                    <i>📝</i> Recrutamento
+                </div>
+                <div class="nav-item" data-module="onboarding">
+                    <i>🎯</i> Onboarding
+                </div>
+                <div class="nav-item" data-module="payroll">
+                    <i>💰</i> Folha de Pagamento
+                </div>
+                <div class="nav-item" data-module="performance">
+                    <i>⭐</i> Desempenho
+                </div>
+                <div class="nav-item" data-module="reports">
+                    <i>📈</i> Relatórios
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">A</div>
+                    <div>
+                        <strong id="userName">Admin</strong>
+                        <p style="font-size: 12px; color: #999;">Administrador</p>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-sm btn-block" onclick="AUTH.logout()">
+                    Sair
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1 id="pageTitle">Dashboard</h1>
+                <div class="header-actions">
+                    <span id="currentDate"></span>
+                </div>
+            </header>
+
+            <div class="content" id="mainContent">
+                <!-- Dashboard Content -->
+                <div id="dashboardModule">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon orange">👥</div>
+                            <div class="stat-info">
+                                <h3 id="totalEmployees">0</h3>
+                                <p>Total Colaboradores</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon brown">✓</div>
+                            <div class="stat-info">
+                                <h3 id="presentToday">0</h3>
+                                <p>Presentes Hoje</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon success">🏖️</div>
+                            <div class="stat-info">
+                                <h3 id="pendingLeave">0</h3>
+                                <p>Férias Pendentes</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon info">📝</div>
+                            <div class="stat-info">
+                                <h3 id="openPositions">0</h3>
+                                <p>Candidaturas Ativas</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon orange">🎯</div>
+                            <div class="stat-info">
+                                <h3 id="onboardingActive">0</h3>
+                                <p>Onboardings Ativos</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon brown">🔐</div>
+                            <div class="stat-info">
+                                <h3 id="totalUsers">0</h3>
+                                <p>Utilizadores Sistema</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Ações Rápidas</h2>
+                        </div>
+                        <div class="card-body">
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                                <button class="btn btn-primary" onclick="MODULES.employees.showCreateForm()">
+                                    ➕ Novo Colaborador
+                                </button>
+                                <button class="btn btn-secondary" onclick="MODULES.users.showCreateForm()">
+                                    🔐 Criar Utilizador
+                                </button>
+                                <button class="btn btn-outline" onclick="MODULES.recruitment.showCreateForm()">
+                                    📝 Nova Candidatura
+                                </button>
+                                <button class="btn btn-success" onclick="MODULES.payroll.showProcessForm()">
+                                    💰 Processar Folha de Pagamento
+                                </button>
+                                <button class="btn btn-outline" onclick="navigateToModule('reports')">
+                                    📊 Ver Relatórios
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Visão Geral por Departamento</h2>
+                        </div>
+                        <div class="card-body">
+                            <div id="departmentStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                <p style="color: #999;">A carregar estatísticas...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Módulos (carregados dinamicamente) -->
+                <div id="employeesModule" class="hidden"></div>
+                <div id="usersModule" class="hidden"></div>
+                <div id="attendanceModule" class="hidden"></div>
+                <div id="leaveModule" class="hidden"></div>
+                <div id="recruitmentModule" class="hidden"></div>
+                <div id="onboardingModule" class="hidden"></div>
+                <div id="payrollModule" class="hidden"></div>
+                <div id="performanceModule" class="hidden"></div>
+                <div id="reportsModule" class="hidden"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Declarar MODULES antes de carregar os módulos
+        const MODULES = {
+            employees: {},
+            users: {},
+            attendance: {},
+            leave: {},
+            recruitment: {},
+            onboarding: {},
+            payroll: {},
+            performance: {},
+            reports: {}
+        };
+    </script>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/employees.js"></script>
+    <script src="js/users.js"></script>
+    <script src="js/attendance.js"></script>
+    <script src="js/recruitment.js"></script>
+    <script src="js/onboarding.js"></script>
+    <script src="js/payroll.js"></script>
+    <script src="js/performance.js"></script>
+    <script src="js/reports.js"></script>
+
+    <script>
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = AUTH.getUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.username;
+                document.getElementById('userAvatar').textContent = user.username[0].toUpperCase();
+            }
+
+            // Data atual
+            const updateDate = () => {
+                const now = new Date();
+                document.getElementById('currentDate').textContent = now.toLocaleDateString('pt-PT', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            };
+            updateDate();
+            setInterval(updateDate, 60000);
+
+            // Carregar dashboard
+            loadDashboardStats();
+
+            // Navegação
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const module = item.getAttribute('data-module');
+                    navigateToModule(module);
+                });
+            });
+        });
+
+        async function loadDashboardStats() {
+            try {
+                // Total colaboradores
+                const employees = await API.employees.getAll();
+                document.getElementById('totalEmployees').textContent = employees.employees?.length || 0;
+
+                // Assiduidade hoje
+                const today = new Date();
+                const attendance = await API.attendance.getAll({
+                    month: today.getMonth() + 1,
+                    year: today.getFullYear()
+                });
+                const todayDate = today.toISOString().split('T')[0];
+                const presentToday = attendance.filter(a => a.date === todayDate && a.status === 'presente').length;
+                document.getElementById('presentToday').textContent = presentToday;
+
+                // Férias pendentes
+                const leave = await API.attendance.getLeaveRequests();
+                const pending = leave.filter(l => l.status === 'pendente').length;
+                document.getElementById('pendingLeave').textContent = pending;
+
+                // Candidaturas
+                const recruitment = await API.recruitment.getAll();
+                const active = recruitment.filter(r => ['novo', 'triagem', 'entrevista'].includes(r.status)).length;
+                document.getElementById('openPositions').textContent = active;
+
+                // Onboarding ativos
+                const onboarding = await API.onboarding.getAll({ status: 'em_progresso' });
+                document.getElementById('onboardingActive').textContent = onboarding.length;
+
+                // Total utilizadores
+                const users = await API.users.getAll();
+                document.getElementById('totalUsers').textContent = users.length;
+
+                // Estatísticas por departamento
+                const headcountData = await API.reports.headcount();
+                const deptStats = document.getElementById('departmentStats');
+                deptStats.innerHTML = headcountData.byDepartment.map(dept => `
+                    <div style="padding: 15px; background: #f8f8f8; border-left: 4px solid var(--primary-orange); border-radius: 4px;">
+                        <div style="font-size: 24px; font-weight: bold; color: var(--primary-brown);">${dept.active}</div>
+                        <div style="color: #666; font-size: 14px;">${dept.department}</div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        function navigateToModule(module) {
+            // Atualizar menu
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-module') === module) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Esconder todos os módulos
+            document.querySelectorAll('[id$="Module"]').forEach(mod => {
+                mod.classList.add('hidden');
+            });
+
+            // Mostrar módulo selecionado
+            const moduleMap = {
+                'dashboard': 'dashboard',
+                'employees': 'employees',
+                'users': 'users',
+                'attendance': 'attendance',
+                'leave': 'leave',
+                'recruitment': 'recruitment',
+                'onboarding': 'onboarding',
+                'payroll': 'payroll',
+                'performance': 'performance',
+                'reports': 'reports'
+            };
+
+            const targetModule = moduleMap[module];
+            document.getElementById(`${targetModule}Module`).classList.remove('hidden');
+
+            // Atualizar título
+            const titles = {
+                'dashboard': 'Dashboard',
+                'employees': 'Gestão de Colaboradores',
+                'users': 'Gestão de Utilizadores',
+                'attendance': 'Gestão de Assiduidade',
+                'leave': 'Gestão de Férias',
+                'recruitment': 'Recrutamento',
+                'onboarding': 'Onboarding & Offboarding',
+                'payroll': 'Folha de Pagamento',
+                'performance': 'Avaliação de Desempenho',
+                'reports': 'Relatórios'
+            };
+            document.getElementById('pageTitle').textContent = titles[module];
+
+            // Carregar dados do módulo
+            if (MODULES[module] && MODULES[module].load) {
+                MODULES[module].load();
+            }
+        }
+
+        // ===================================
+        // SIDEBAR MOBILE - TOGGLE
+        // ===================================
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggle = document.getElementById('menuToggle');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+            toggle.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggle = document.getElementById('menuToggle');
+
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            toggle.classList.remove('active');
+        }
+
+        // Fechar sidebar ao clicar em item do menu (mobile)
+        document.addEventListener('DOMContentLoaded', () => {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        closeSidebar();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

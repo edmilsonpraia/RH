@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Sistema RH</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28A745; font-weight: bold; }
+        .error { color: #DC3545; font-weight: bold; }
+        h1 { color: #8B4513; }
+        h2 { color: #A0522D; margin-top: 0; }
+        pre {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        button {
+            background: #FF8C00;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #E67E00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Página de Teste - Sistema RH COPIA GROUP</h1>
+
+    <div class="test-card">
+        <h2>1. Informações do Sistema</h2>
+        <p><strong>Data/Hora:</strong> <span id="datetime"></span></p>
+        <p><strong>URL:</strong> <span id="url"></span></p>
+        <p><strong>User Agent:</strong> <span id="useragent"></span></p>
+    </div>
+
+    <div class="test-card">
+        <h2>2. Teste de Servidor</h2>
+        <button onclick="testServer()">Testar Servidor</button>
+        <div id="serverResult"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>3. Teste de Scripts JavaScript</h2>
+        <button onclick="testScripts()">Verificar Scripts</button>
+        <div id="scriptsResult"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>4. Teste de Módulos</h2>
+        <button onclick="testModules()">Verificar Módulos</button>
+        <div id="modulesResult"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>5. Teste de APIs</h2>
+        <button onclick="testAPIs()">Testar APIs</button>
+        <div id="apisResult"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>6. Ações</h2>
+        <button onclick="clearCache()">Limpar Cache Local</button>
+        <button onclick="location.reload(true)">Hard Reload</button>
+        <button onclick="window.location.href='admin-dashboard.html'">Ir para Dashboard</button>
+    </div>
+
+    <script>
+        // Informações básicas
+        document.getElementById('datetime').textContent = new Date().toLocaleString('pt-PT');
+        document.getElementById('url').textContent = window.location.href;
+        document.getElementById('useragent').textContent = navigator.userAgent;
+
+        // Declarar MODULES ANTES de carregar os scripts
+        const MODULES = {
+            employees: {},
+            users: {},
+            attendance: {},
+            leave: {},
+            recruitment: {},
+            onboarding: {},
+            payroll: {},
+            performance: {},
+            reports: {}
+        };
+    </script>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/employees.js"></script>
+    <script src="js/users.js"></script>
+    <script src="js/attendance.js"></script>
+    <script src="js/recruitment.js"></script>
+    <script src="js/onboarding.js"></script>
+    <script src="js/payroll.js"></script>
+    <script src="js/performance.js"></script>
+    <script src="js/reports.js"></script>
+
+    <script>
+
+        async function testServer() {
+            const result = document.getElementById('serverResult');
+            result.innerHTML = '<p>Testando...</p>';
+
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+
+                if (data.status === 'OK') {
+                    result.innerHTML = `
+                        <p class="success">✅ Servidor OK</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    result.innerHTML = `<p class="error">❌ Servidor respondeu mas status não é OK</p>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Erro: ${error.message}</p>`;
+            }
+        }
+
+        function testScripts() {
+            const result = document.getElementById('scriptsResult');
+            const scripts = [
+                'auth.js',
+                'api.js',
+                'components.js',
+                'employees.js',
+                'users.js',
+                'attendance.js',
+                'recruitment.js',
+                'onboarding.js',
+                'payroll.js',
+                'performance.js',
+                'reports.js'
+            ];
+
+            let html = '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<tr><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Script</th><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Status</th></tr>';
+
+            scripts.forEach(script => {
+                const elements = document.querySelectorAll(`script[src*="${script}"]`);
+                const loaded = elements.length > 0;
+                html += `<tr>
+                    <td style="padding: 5px;">${script}</td>
+                    <td style="padding: 5px;">${loaded ? '<span class="success">✅ Carregado</span>' : '<span class="error">❌ Não encontrado</span>'}</td>
+                </tr>`;
+            });
+
+            html += '</table>';
+            result.innerHTML = html;
+        }
+
+        function testModules() {
+            const result = document.getElementById('modulesResult');
+
+            const modules = [
+                'employees',
+                'users',
+                'attendance',
+                'leave',
+                'recruitment',
+                'onboarding',
+                'payroll',
+                'performance',
+                'reports'
+            ];
+
+            let html = '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<tr><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Módulo</th><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Status</th></tr>';
+
+            modules.forEach(mod => {
+                const exists = typeof MODULES[mod] !== 'undefined';
+                const hasLoad = exists && typeof MODULES[mod].load === 'function';
+
+                let status = '';
+                if (!exists) {
+                    status = '<span class="error">❌ Não definido</span>';
+                } else if (!hasLoad) {
+                    status = '<span class="error">⚠️ Definido mas sem load()</span>';
+                } else {
+                    status = '<span class="success">✅ OK</span>';
+                }
+
+                html += `<tr>
+                    <td style="padding: 5px;">${mod}</td>
+                    <td style="padding: 5px;">${status}</td>
+                </tr>`;
+            });
+
+            html += '</table>';
+
+            html += '<br><pre>' + JSON.stringify(Object.keys(MODULES), null, 2) + '</pre>';
+
+            result.innerHTML = html;
+        }
+
+        async function testAPIs() {
+            const result = document.getElementById('apisResult');
+            result.innerHTML = '<p>Testando APIs...</p>';
+
+            const tests = [
+                { name: 'Health', url: '/api/health', needsAuth: false },
+                { name: 'Employees', url: '/api/employees', needsAuth: true },
+                { name: 'Users', url: '/api/users', needsAuth: true },
+                { name: 'Onboarding', url: '/api/onboarding', needsAuth: true },
+                { name: 'Reports Headcount', url: '/api/reports/headcount', needsAuth: true }
+            ];
+
+            let html = '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<tr><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">API</th><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Status</th></tr>';
+
+            for (const test of tests) {
+                try {
+                    const response = await fetch(test.url);
+                    const status = response.status;
+
+                    let statusText = '';
+                    if (status === 200) {
+                        statusText = '<span class="success">✅ 200 OK</span>';
+                    } else if (status === 401 && test.needsAuth) {
+                        statusText = '<span class="success">✅ 401 (esperado, precisa login)</span>';
+                    } else {
+                        statusText = `<span class="error">❌ ${status}</span>`;
+                    }
+
+                    html += `<tr>
+                        <td style="padding: 5px;">${test.name}</td>
+                        <td style="padding: 5px;">${statusText}</td>
+                    </tr>`;
+                } catch (error) {
+                    html += `<tr>
+                        <td style="padding: 5px;">${test.name}</td>
+                        <td style="padding: 5px;"><span class="error">❌ ${error.message}</span></td>
+                    </tr>`;
+                }
+            }
+
+            html += '</table>';
+            result.innerHTML = html;
+        }
+
+        function clearCache() {
+            localStorage.clear();
+            sessionStorage.clear();
+            alert('Cache local limpo! Pressione Ctrl+Shift+R para hard reload.');
+        }
+
+        // Auto-executar testes ao carregar
+        window.addEventListener('load', () => {
+            testServer();
+            testScripts();
+            testModules();
+        });
+    </script>
+</body>
+</html>
