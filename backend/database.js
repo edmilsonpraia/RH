@@ -1,7 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Detectar ambiente Vercel (serverless) - usar /tmp/ para a BD
 const isVercel = process.env.VERCEL === '1';
@@ -13,9 +13,14 @@ if (!isVercel && !fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
+// Promise que resolve quando BD está completamente pronta
+let resolveDbReady;
+const dbReady = new Promise((resolve) => { resolveDbReady = resolve; });
+
 const db = new sqlite3.Database(DB_PATH, (err) => {
     if (err) {
         console.error('Erro ao conectar à base de dados:', err);
+        resolveDbReady(); // resolver mesmo com erro para não bloquear
     } else {
         console.log('✓ Conectado à base de dados SQLite');
         initializeDatabase();
@@ -164,8 +169,11 @@ function createDefaultAdmin() {
                     } else {
                         console.log('✓ Utilizador admin criado (username: admin, password: admin123)');
                     }
+                    resolveDbReady();
                 }
             );
+        } else {
+            resolveDbReady();
         }
     });
 }
@@ -178,4 +186,4 @@ function addAuditLog(userId, action, tableName, recordId, details = null) {
     );
 }
 
-module.exports = { db, addAuditLog };
+module.exports = { db, addAuditLog, dbReady };

@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const { dbReady } = require('../backend/database');
 
 const app = express();
 
@@ -7,6 +8,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Esperar BD estar pronta antes de processar qualquer request
+app.use(async (req, res, next) => {
+    await dbReady;
+    next();
+});
 
 // Importar rotas
 const authRoutes = require('../backend/routes/auth.routes');
