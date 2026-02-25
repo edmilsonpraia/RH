@@ -1,8 +1,17 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcrypt');
 
-const DB_PATH = path.join(__dirname, 'db', 'hr.db');
+// Detectar ambiente Vercel (serverless) - usar /tmp/ para a BD
+const isVercel = process.env.VERCEL === '1';
+const DB_DIR = isVercel ? '/tmp' : path.join(__dirname, 'db');
+const DB_PATH = path.join(DB_DIR, 'hr.db');
+
+// Garantir que o diretório existe
+if (!isVercel && !fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+}
 
 const db = new sqlite3.Database(DB_PATH, (err) => {
     if (err) {
