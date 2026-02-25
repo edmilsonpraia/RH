@@ -151,31 +151,68 @@ function initializeDatabase() {
 
         console.log('✓ Tabelas da base de dados criadas/verificadas');
 
-        // Criar utilizador admin padrão
-        createDefaultAdmin();
+        // Criar dados padrão
+        createDefaultData();
     });
 }
 
-function createDefaultAdmin() {
-    db.get("SELECT * FROM users WHERE username = 'admin'", async (err, row) => {
-        if (!row) {
-            const hashedPassword = await bcrypt.hash('admin123', 10);
-            db.run(
-                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                ['admin', hashedPassword, 'admin'],
-                (err) => {
-                    if (err) {
-                        console.error('Erro ao criar admin padrão:', err);
-                    } else {
-                        console.log('✓ Utilizador admin criado (username: admin, password: admin123)');
-                    }
-                    resolveDbReady();
-                }
-            );
-        } else {
-            resolveDbReady();
+async function createDefaultData() {
+    try {
+        // 1) Admin
+        const admin = await new Promise((resolve, reject) => {
+            db.get("SELECT * FROM users WHERE username = 'admin'", (err, row) => err ? reject(err) : resolve(row));
+        });
+
+        if (!admin) {
+            const adminHash = await bcrypt.hash('admin123', 10);
+            await new Promise((resolve, reject) => {
+                db.run("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                    ['admin', adminHash, 'admin'],
+                    (err) => err ? reject(err) : resolve());
+            });
+            console.log('✓ Admin criado (admin / admin123)');
         }
-    });
+
+        // 2) Colaborador demo
+        const employee = await new Promise((resolve, reject) => {
+            db.get("SELECT * FROM employees WHERE email = 'joao.silva@copiagroup.com'", (err, row) => err ? reject(err) : resolve(row));
+        });
+
+        let employeeId;
+        if (!employee) {
+            employeeId = await new Promise((resolve, reject) => {
+                db.run(
+                    `INSERT INTO employees (name, email, phone, position, department, salary, hire_date)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    ['João Silva', 'joao.silva@copiagroup.com', '+244 923 456 789', 'Analista de TI', 'Tecnologia', 350000, '2024-03-15'],
+                    function(err) { err ? reject(err) : resolve(this.lastID); }
+                );
+            });
+            console.log('✓ Colaborador demo criado (João Silva)');
+        } else {
+            employeeId = employee.id;
+        }
+
+        // 3) Utilizador regular
+        const user = await new Promise((resolve, reject) => {
+            db.get("SELECT * FROM users WHERE username = 'joao.silva'", (err, row) => err ? reject(err) : resolve(row));
+        });
+
+        if (!user) {
+            const userHash = await bcrypt.hash('123456', 10);
+            await new Promise((resolve, reject) => {
+                db.run("INSERT INTO users (username, password_hash, role, employee_id) VALUES (?, ?, ?, ?)",
+                    ['joao.silva', userHash, 'user', employeeId],
+                    (err) => err ? reject(err) : resolve());
+            });
+            console.log('✓ Utilizador demo criado (joao.silva / 123456)');
+        }
+
+        resolveDbReady();
+    } catch (err) {
+        console.error('Erro ao criar dados padrão:', err);
+        resolveDbReady();
+    }
 }
 
 // Função para adicionar logs de auditoria
