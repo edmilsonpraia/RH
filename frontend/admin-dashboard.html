@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/grids.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css">
 </head>
 <body>
     <!-- Botão Hamburger para Mobile -->
@@ -21,55 +22,70 @@
 
     <div class="container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="assets/LOGO.png" alt="COPIA GROUP">
-                <h2>Sistema de RH</h2>
+                <div class="sidebar-brand">
+                    <img src="assets/LOGO.png" alt="COPIA GROUP">
+                    <h2>Sistema de RH</h2>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebarCollapse()" title="Recolher">
+                    <i class="codicon codicon-chevron-left"></i>
+                </button>
             </div>
 
             <nav class="sidebar-nav">
-                <div class="nav-item active" data-module="dashboard">
-                    <i>📊</i> Dashboard
+                <div class="nav-item active" data-module="dashboard" data-label="Dashboard">
+                    <i class="codicon codicon-dashboard"></i>
+                    <span class="nav-item-label">Dashboard</span>
                 </div>
-                <div class="nav-item" data-module="employees">
-                    <i>👥</i> Colaboradores
+                <div class="nav-item" data-module="employees" data-label="Colaboradores">
+                    <i class="codicon codicon-organization"></i>
+                    <span class="nav-item-label">Colaboradores</span>
                 </div>
-                <div class="nav-item" data-module="users">
-                    <i>🔐</i> Utilizadores
+                <div class="nav-item" data-module="users" data-label="Utilizadores">
+                    <i class="codicon codicon-key"></i>
+                    <span class="nav-item-label">Utilizadores</span>
                 </div>
-                <div class="nav-item" data-module="attendance">
-                    <i>🕐</i> Assiduidade
+                <div class="nav-item" data-module="attendance" data-label="Assiduidade">
+                    <i class="codicon codicon-watch"></i>
+                    <span class="nav-item-label">Assiduidade</span>
                 </div>
-                <div class="nav-item" data-module="leave">
-                    <i>🏖️</i> Férias
+                <div class="nav-item" data-module="leave" data-label="Férias">
+                    <i class="codicon codicon-calendar"></i>
+                    <span class="nav-item-label">Férias</span>
                 </div>
-                <div class="nav-item" data-module="recruitment">
-                    <i>📝</i> Recrutamento
+                <div class="nav-item" data-module="recruitment" data-label="Recrutamento">
+                    <i class="codicon codicon-search"></i>
+                    <span class="nav-item-label">Recrutamento</span>
                 </div>
-                <div class="nav-item" data-module="onboarding">
-                    <i>🎯</i> Onboarding
+                <div class="nav-item" data-module="onboarding" data-label="Onboarding">
+                    <i class="codicon codicon-rocket"></i>
+                    <span class="nav-item-label">Onboarding</span>
                 </div>
-                <div class="nav-item" data-module="payroll">
-                    <i>💰</i> Folha de Pagamento
+                <div class="nav-item" data-module="payroll" data-label="Folha de Pagamento">
+                    <i class="codicon codicon-credit-card"></i>
+                    <span class="nav-item-label">Folha de Pagamento</span>
                 </div>
-                <div class="nav-item" data-module="performance">
-                    <i>⭐</i> Desempenho
+                <div class="nav-item" data-module="performance" data-label="Desempenho">
+                    <i class="codicon codicon-star-full"></i>
+                    <span class="nav-item-label">Desempenho</span>
                 </div>
-                <div class="nav-item" data-module="reports">
-                    <i>📈</i> Relatórios
+                <div class="nav-item" data-module="reports" data-label="Relatórios">
+                    <i class="codicon codicon-graph"></i>
+                    <span class="nav-item-label">Relatórios</span>
                 </div>
             </nav>
 
             <div class="sidebar-footer">
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">A</div>
-                    <div>
+                    <div class="user-info-text">
                         <strong id="userName">Admin</strong>
-                        <p style="font-size: 12px; color: #999;">Administrador</p>
+                        <p>Administrador</p>
                     </div>
                 </div>
                 <button class="btn btn-danger btn-sm btn-block" onclick="AUTH.logout()">
-                    Sair
+                    <i class="codicon codicon-sign-out"></i> Sair
                 </button>
             </div>
         </aside>
@@ -88,42 +104,42 @@
                 <div id="dashboardModule">
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <div class="stat-icon orange">👥</div>
+                            <div class="stat-icon brand"><i class="codicon codicon-organization"></i></div>
                             <div class="stat-info">
                                 <h3 id="totalEmployees">0</h3>
                                 <p>Total Colaboradores</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon brown">✓</div>
+                            <div class="stat-icon success"><i class="codicon codicon-check"></i></div>
                             <div class="stat-info">
                                 <h3 id="presentToday">0</h3>
                                 <p>Presentes Hoje</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon success">🏖️</div>
+                            <div class="stat-icon warning"><i class="codicon codicon-calendar"></i></div>
                             <div class="stat-info">
                                 <h3 id="pendingLeave">0</h3>
                                 <p>Férias Pendentes</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon info">📝</div>
+                            <div class="stat-icon info"><i class="codicon codicon-search"></i></div>
                             <div class="stat-info">
                                 <h3 id="openPositions">0</h3>
                                 <p>Candidaturas Ativas</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon orange">🎯</div>
+                            <div class="stat-icon purple"><i class="codicon codicon-rocket"></i></div>
                             <div class="stat-info">
                                 <h3 id="onboardingActive">0</h3>
                                 <p>Onboardings Ativos</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon brown">🔐</div>
+                            <div class="stat-icon dark"><i class="codicon codicon-key"></i></div>
                             <div class="stat-info">
                                 <h3 id="totalUsers">0</h3>
                                 <p>Utilizadores Sistema</p>
@@ -136,21 +152,21 @@
                             <h2>Ações Rápidas</h2>
                         </div>
                         <div class="card-body">
-                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                                 <button class="btn btn-primary" onclick="MODULES.employees.showCreateForm()">
-                                    ➕ Novo Colaborador
+                                    <i class="codicon codicon-add"></i> Novo Colaborador
                                 </button>
                                 <button class="btn btn-secondary" onclick="MODULES.users.showCreateForm()">
-                                    🔐 Criar Utilizador
+                                    <i class="codicon codicon-key"></i> Criar Utilizador
                                 </button>
                                 <button class="btn btn-outline" onclick="MODULES.recruitment.showCreateForm()">
-                                    📝 Nova Candidatura
+                                    <i class="codicon codicon-search"></i> Nova Candidatura
                                 </button>
                                 <button class="btn btn-success" onclick="MODULES.payroll.showProcessForm()">
-                                    💰 Processar Folha de Pagamento
+                                    <i class="codicon codicon-credit-card"></i> Processar Folha
                                 </button>
                                 <button class="btn btn-outline" onclick="navigateToModule('reports')">
-                                    📊 Ver Relatórios
+                                    <i class="codicon codicon-graph"></i> Ver Relatórios
                                 </button>
                             </div>
                         </div>
@@ -366,6 +382,40 @@
             overlay.classList.remove('active');
             toggle.classList.remove('active');
         }
+
+        // ===================================
+        // SIDEBAR DESKTOP - COLLAPSE/EXPAND
+        // ===================================
+        function toggleSidebarCollapse() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const collapsed = sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+
+            const icon = toggleBtn.querySelector('.codicon');
+            if (icon) {
+                icon.className = collapsed
+                    ? 'codicon codicon-chevron-right'
+                    : 'codicon codicon-chevron-left';
+            }
+            toggleBtn.title = collapsed ? 'Expandir' : 'Recolher';
+        }
+
+        // Restaurar estado da sidebar ao carregar
+        (function restoreSidebarState() {
+            if (localStorage.getItem('sidebarCollapsed') === '1' && window.innerWidth > 768) {
+                document.addEventListener('DOMContentLoaded', () => {
+                    const sidebar = document.getElementById('sidebar');
+                    const toggleBtn = document.getElementById('sidebarToggle');
+                    if (sidebar) {
+                        sidebar.classList.add('collapsed');
+                        const icon = toggleBtn?.querySelector('.codicon');
+                        if (icon) icon.className = 'codicon codicon-chevron-right';
+                        if (toggleBtn) toggleBtn.title = 'Expandir';
+                    }
+                });
+            }
+        })();
 
         // Fechar sidebar ao clicar em item do menu (mobile)
         document.addEventListener('DOMContentLoaded', () => {

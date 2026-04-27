@@ -25,6 +25,15 @@
     white-space: nowrap;
 }
 
+.btn .codicon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.btn-sm .codicon {
+    font-size: 14px;
+}
+
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;

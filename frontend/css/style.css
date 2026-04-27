@@ -94,7 +94,7 @@ body {
     overflow: hidden;
 }
 
-/* Sidebar */
+/* Sidebar (expansivel - estilo VS Code) */
 .sidebar {
     width: 260px;
     background: var(--ink-900);
@@ -103,38 +103,78 @@ body {
     flex-direction: column;
     box-shadow: 1px 0 0 var(--ink-800);
     z-index: 100;
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
 }
 
 .sidebar-header {
-    padding: 24px 20px 20px;
-    text-align: center;
+    padding: 18px 16px 16px;
     border-bottom: 1px solid var(--ink-800);
     background-color: var(--ink-950);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 72px;
+}
+
+.sidebar-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    overflow: hidden;
+    transition: opacity 0.15s ease;
 }
 
 .sidebar-header img {
-    max-width: 160px;
+    max-width: 140px;
     height: auto;
     filter: brightness(0) invert(1);
     opacity: 0.95;
+    transition: max-width 0.22s ease;
 }
 
 .sidebar-header h2 {
-    margin-top: 12px;
-    font-size: 13px;
+    margin-top: 8px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--ink-300);
     letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.sidebar-toggle {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ink-400);
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    font-size: 16px;
+}
+
+.sidebar-toggle:hover {
+    background-color: var(--ink-800);
+    color: #ffffff;
+    border-color: var(--ink-700);
 }
 
 .sidebar-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 12px;
+    overflow-x: hidden;
+    padding: 12px 10px;
 }
 
 .nav-item {
-    padding: 10px 14px;
+    padding: 9px 12px;
     cursor: pointer;
     transition: all 0.15s ease;
     border-radius: var(--radius-sm);
@@ -145,6 +185,16 @@ body {
     font-size: 14px;
     font-weight: 500;
     margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    position: relative;
+}
+
+.nav-item-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.15s ease;
 }
 
 .nav-item:hover {
@@ -159,17 +209,24 @@ body {
     box-shadow: 0 1px 3px rgb(37 99 235 / 0.4);
 }
 
-.nav-item i {
-    font-size: 16px;
-    width: 20px;
+.nav-item i,
+.nav-item .codicon {
+    font-size: 17px;
+    width: 22px;
+    height: 22px;
     text-align: center;
     font-style: normal;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .sidebar-footer {
-    padding: 16px;
+    padding: 14px;
     border-top: 1px solid var(--ink-800);
     background-color: var(--ink-950);
+    transition: padding 0.22s ease;
 }
 
 .user-info {
@@ -177,21 +234,33 @@ body {
     align-items: center;
     gap: 10px;
     margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.user-info-text {
+    overflow: hidden;
+    transition: opacity 0.15s ease;
 }
 
 .user-info strong {
     color: #ffffff;
     font-size: 14px;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .user-info p {
     font-size: 12px;
     color: var(--ink-400) !important;
+    white-space: nowrap;
 }
 
 .user-avatar {
     width: 38px;
     height: 38px;
+    min-width: 38px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
     display: flex;
@@ -200,6 +269,73 @@ body {
     font-weight: 600;
     font-size: 15px;
     color: #ffffff;
+    flex-shrink: 0;
+}
+
+/* === SIDEBAR COLAPSADA (estilo VS Code) === */
+.sidebar.collapsed {
+    width: 64px;
+}
+
+.sidebar.collapsed .sidebar-brand,
+.sidebar.collapsed .sidebar-header h2,
+.sidebar.collapsed .nav-item-label,
+.sidebar.collapsed .user-info-text,
+.sidebar.collapsed .sidebar-footer .btn {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 18px 8px;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .sidebar-nav {
+    padding: 12px 6px;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 10px 0;
+    gap: 0;
+}
+
+.sidebar.collapsed .sidebar-footer {
+    padding: 12px 6px;
+}
+
+.sidebar.collapsed .user-info {
+    justify-content: center;
+    margin-bottom: 0;
+    gap: 0;
+}
+
+/* Tooltip ao passar mouse em sidebar colapsada */
+.sidebar.collapsed .nav-item:hover::after {
+    content: attr(data-label);
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--ink-900);
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
+    z-index: 1000;
+    pointer-events: none;
+    border: 1px solid var(--ink-700);
 }
 
 /* Main Content */
@@ -491,13 +627,35 @@ body {
 @media screen and (max-width: 768px) {
     .menu-toggle { display: flex; }
 
-    .sidebar {
+    .sidebar,
+    .sidebar.collapsed {
         position: fixed;
         top: 0; left: -260px;
         height: 100vh;
         width: 260px;
         z-index: 1000;
-        transition: left 0.3s ease;
+        transition: left 0.3s ease, width 0s;
+    }
+
+    /* Em mobile a sidebar nao colapsa - sempre full width quando aberta */
+    .sidebar.collapsed .sidebar-brand,
+    .sidebar.collapsed .sidebar-header h2,
+    .sidebar.collapsed .nav-item-label,
+    .sidebar.collapsed .user-info-text,
+    .sidebar.collapsed .sidebar-footer .btn {
+        opacity: 1;
+        pointer-events: auto;
+        width: auto;
+    }
+
+    .sidebar.collapsed .nav-item {
+        justify-content: flex-start;
+        padding: 9px 12px;
+        gap: 12px;
+    }
+
+    .sidebar.collapsed .sidebar-toggle {
+        display: none;
     }
 
     .sidebar.active { left: 0; }

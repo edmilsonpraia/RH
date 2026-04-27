@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/grids.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css">
 </head>
 <body>
     <!-- Botão Hamburger para Mobile -->
@@ -21,43 +22,54 @@
 
     <div class="container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="assets/LOGO.png" alt="COPIA GROUP">
-                <h2>Portal do Colaborador</h2>
+                <div class="sidebar-brand">
+                    <img src="assets/LOGO.png" alt="COPIA GROUP">
+                    <h2>Portal do Colaborador</h2>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebarCollapse()" title="Recolher">
+                    <i class="codicon codicon-chevron-left"></i>
+                </button>
             </div>
 
             <nav class="sidebar-nav">
-                <div class="nav-item active" data-module="home">
-                    <i>🏠</i> Início
+                <div class="nav-item active" data-module="home" data-label="Início">
+                    <i class="codicon codicon-home"></i>
+                    <span class="nav-item-label">Início</span>
                 </div>
-                <div class="nav-item" data-module="profile">
-                    <i>👤</i> Meu Perfil
+                <div class="nav-item" data-module="profile" data-label="Meu Perfil">
+                    <i class="codicon codicon-account"></i>
+                    <span class="nav-item-label">Meu Perfil</span>
                 </div>
-                <div class="nav-item" data-module="attendance">
-                    <i>🕐</i> Assiduidade
+                <div class="nav-item" data-module="attendance" data-label="Assiduidade">
+                    <i class="codicon codicon-watch"></i>
+                    <span class="nav-item-label">Assiduidade</span>
                 </div>
-                <div class="nav-item" data-module="leave">
-                    <i>🏖️</i> Férias
+                <div class="nav-item" data-module="leave" data-label="Férias">
+                    <i class="codicon codicon-calendar"></i>
+                    <span class="nav-item-label">Férias</span>
                 </div>
-                <div class="nav-item" data-module="payslips">
-                    <i>💰</i> Recibos de Vencimento
+                <div class="nav-item" data-module="payslips" data-label="Recibos">
+                    <i class="codicon codicon-credit-card"></i>
+                    <span class="nav-item-label">Recibos de Vencimento</span>
                 </div>
-                <div class="nav-item" data-module="performance">
-                    <i>⭐</i> Avaliações
+                <div class="nav-item" data-module="performance" data-label="Avaliações">
+                    <i class="codicon codicon-star-full"></i>
+                    <span class="nav-item-label">Avaliações</span>
                 </div>
             </nav>
 
             <div class="sidebar-footer">
                 <div class="user-info">
                     <div class="user-avatar" id="userAvatar">U</div>
-                    <div>
+                    <div class="user-info-text">
                         <strong id="userName">Utilizador</strong>
-                        <p style="font-size: 12px; color: #999;">Colaborador</p>
+                        <p>Colaborador</p>
                     </div>
                 </div>
                 <button class="btn btn-danger btn-sm btn-block" onclick="AUTH.logout()">
-                    Sair
+                    <i class="codicon codicon-sign-out"></i> Sair
                 </button>
             </div>
         </aside>
@@ -76,21 +88,21 @@
                 <div id="homeModule">
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <div class="stat-icon orange">🕐</div>
+                            <div class="stat-icon brand"><i class="codicon codicon-watch"></i></div>
                             <div class="stat-info">
                                 <h3 id="todayStatus">-</h3>
                                 <p>Estado Hoje</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon brown">📅</div>
+                            <div class="stat-icon warning"><i class="codicon codicon-calendar"></i></div>
                             <div class="stat-info">
                                 <h3 id="leaveBalance">0</h3>
                                 <p>Dias de Férias</p>
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon success">⏱️</div>
+                            <div class="stat-icon success"><i class="codicon codicon-clock"></i></div>
                             <div class="stat-info">
                                 <h3 id="hoursWorked">0h</h3>
                                 <p>Horas Este Mês</p>
@@ -103,15 +115,15 @@
                             <h2>Ações Rápidas</h2>
                         </div>
                         <div class="card-body">
-                            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                                 <button class="btn btn-success" onclick="USER.checkIn()">
-                                    ✓ Registar Entrada
+                                    <i class="codicon codicon-debug-start"></i> Registar Entrada
                                 </button>
                                 <button class="btn btn-danger" onclick="USER.checkOut()">
-                                    ✗ Registar Saída
+                                    <i class="codicon codicon-debug-stop"></i> Registar Saída
                                 </button>
                                 <button class="btn btn-primary" onclick="USER.requestLeave()">
-                                    🏖️ Solicitar Férias
+                                    <i class="codicon codicon-calendar"></i> Solicitar Férias
                                 </button>
                             </div>
                         </div>
@@ -363,6 +375,40 @@
             overlay.classList.remove('active');
             toggle.classList.remove('active');
         }
+
+        // ===================================
+        // SIDEBAR DESKTOP - COLLAPSE/EXPAND
+        // ===================================
+        function toggleSidebarCollapse() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const collapsed = sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+
+            const icon = toggleBtn.querySelector('.codicon');
+            if (icon) {
+                icon.className = collapsed
+                    ? 'codicon codicon-chevron-right'
+                    : 'codicon codicon-chevron-left';
+            }
+            toggleBtn.title = collapsed ? 'Expandir' : 'Recolher';
+        }
+
+        // Restaurar estado da sidebar ao carregar
+        (function restoreSidebarState() {
+            if (localStorage.getItem('sidebarCollapsed') === '1' && window.innerWidth > 768) {
+                document.addEventListener('DOMContentLoaded', () => {
+                    const sidebar = document.getElementById('sidebar');
+                    const toggleBtn = document.getElementById('sidebarToggle');
+                    if (sidebar) {
+                        sidebar.classList.add('collapsed');
+                        const icon = toggleBtn?.querySelector('.codicon');
+                        if (icon) icon.className = 'codicon codicon-chevron-right';
+                        if (toggleBtn) toggleBtn.title = 'Expandir';
+                    }
+                });
+            }
+        })();
 
         // Fechar sidebar ao clicar em item do menu (mobile)
         document.addEventListener('DOMContentLoaded', () => {

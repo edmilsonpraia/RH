@@ -12,7 +12,7 @@ MODULES.employees = {
                 <div class="card-header">
                     <h2>Lista de Colaboradores</h2>
                     <button class="btn btn-primary btn-sm" onclick="MODULES.employees.showCreateForm()">
-                        ➕ Novo Colaborador
+                        <i class="codicon codicon-add"></i> Novo Colaborador
                     </button>
                 </div>
                 <div class="card-body">
@@ -195,9 +195,9 @@ MODULES.employees = {
                 label: 'Ações',
                 className: 'actions',
                 render: (row) => `
-                    <button class="btn-icon view" onclick="MODULES.employees.showDetails(${row.id})" title="Ver">👁️</button>
-                    <button class="btn-icon edit" onclick="MODULES.employees.showEditForm(${row.id})" title="Editar">✏️</button>
-                    <button class="btn-icon delete" onclick="MODULES.employees.confirmDelete(${row.id}, '${escape(row.name).replace(/'/g, '&#39;')}')" title="Eliminar">🗑️</button>
+                    <button class="btn-icon view" onclick="MODULES.employees.showDetails(${row.id})" title="Ver"><i class="codicon codicon-eye"></i></button>
+                    <button class="btn-icon edit" onclick="MODULES.employees.showEditForm(${row.id})" title="Editar"><i class="codicon codicon-edit"></i></button>
+                    <button class="btn-icon delete" onclick="MODULES.employees.confirmDelete(${row.id}, '${escape(row.name).replace(/'/g, '&#39;')}')" title="Eliminar"><i class="codicon codicon-trash"></i></button>
                 `
             }
         ];
