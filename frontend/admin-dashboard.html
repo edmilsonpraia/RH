@@ -245,9 +245,9 @@
 
         async function loadDashboardStats() {
             try {
-                // Total colaboradores
-                const employees = await API.employees.getAll();
-                document.getElementById('totalEmployees').textContent = employees.employees?.length || 0;
+                // Total colaboradores (usar pagination.total, nao length da pagina)
+                const employees = await API.employees.getAll({ limit: 1 });
+                document.getElementById('totalEmployees').textContent = employees.pagination?.total ?? (employees.employees?.length || 0);
 
                 // Assiduidade hoje
                 const today = new Date();
@@ -281,9 +281,9 @@
                 const headcountData = await API.reports.headcount();
                 const deptStats = document.getElementById('departmentStats');
                 deptStats.innerHTML = headcountData.byDepartment.map(dept => `
-                    <div style="padding: 15px; background: #f8f8f8; border-left: 4px solid var(--primary-orange); border-radius: 4px;">
-                        <div style="font-size: 24px; font-weight: bold; color: var(--primary-brown);">${dept.active}</div>
-                        <div style="color: #666; font-size: 14px;">${dept.department}</div>
+                    <div style="padding: 14px; background: var(--ink-50); border-left: 3px solid var(--brand-600); border-radius: 6px;">
+                        <div style="font-size: 22px; font-weight: 700; color: var(--ink-900);">${dept.active}</div>
+                        <div style="color: var(--ink-500); font-size: 13px; margin-top: 2px;">${dept.department}</div>
                     </div>
                 `).join('');
 

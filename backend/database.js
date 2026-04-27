@@ -43,17 +43,64 @@ function initializeDatabase() {
         // Tabela de colaboradores
         db.run(`CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            meca TEXT,
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             phone TEXT,
             position TEXT NOT NULL,
             department TEXT NOT NULL,
-            salary REAL NOT NULL,
+            salary REAL NOT NULL DEFAULT 0,
             hire_date DATE NOT NULL,
             status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'suspended')),
+            document_type TEXT,
+            document_number TEXT,
+            document_expiry DATE,
+            document_status TEXT,
+            nationality TEXT,
+            birth_date DATE,
+            gender TEXT,
+            contract_type TEXT,
+            contract_duration_days INTEGER,
+            seniority TEXT,
+            last_renewal_date DATE,
+            next_renewal_date DATE,
+            contract_status TEXT,
+            activity_type TEXT,
+            site TEXT,
+            company TEXT,
+            children INTEGER DEFAULT 0,
+            academic_degree TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
+
+        // Migracoes: adicionar colunas em BDs antigas
+        const employeeColumns = [
+            ['meca', 'TEXT'],
+            ['document_type', 'TEXT'],
+            ['document_number', 'TEXT'],
+            ['document_expiry', 'DATE'],
+            ['document_status', 'TEXT'],
+            ['nationality', 'TEXT'],
+            ['birth_date', 'DATE'],
+            ['gender', 'TEXT'],
+            ['contract_type', 'TEXT'],
+            ['contract_duration_days', 'INTEGER'],
+            ['seniority', 'TEXT'],
+            ['last_renewal_date', 'DATE'],
+            ['next_renewal_date', 'DATE'],
+            ['contract_status', 'TEXT'],
+            ['activity_type', 'TEXT'],
+            ['site', 'TEXT'],
+            ['company', 'TEXT'],
+            ['children', 'INTEGER DEFAULT 0'],
+            ['academic_degree', 'TEXT']
+        ];
+        employeeColumns.forEach(([col, type]) => {
+            db.run(`ALTER TABLE employees ADD COLUMN ${col} ${type}`, (err) => {
+                // Ignora erro se a coluna ja existe
+            });
+        });
 
         // Tabela de recrutamento
         db.run(`CREATE TABLE IF NOT EXISTS recruitment (
