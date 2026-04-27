@@ -16,21 +16,33 @@ const TURSO_URL = process.env.TURSO_DATABASE_URL;
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
 const useTurso = !!TURSO_URL;
 
+// MEMORY_MODE: true se MEMORY_MODE=1 ou se estiver na Vercel sem Turso
+// (evita escrever em /tmp que e efemero)
+const isVercel = process.env.VERCEL === '1';
+const useMemory = process.env.MEMORY_MODE === '1' || (isVercel && !useTurso);
+
 let resolveDbReady;
 const dbReady = new Promise((resolve) => { resolveDbReady = resolve; });
 
 let db;
+let memorySeedPath = null;
 
 if (useTurso) {
     db = createTursoShim();
     console.log(`✓ Conectado ao Turso (${TURSO_URL})`);
+} else if (useMemory) {
+    const sqlite3 = require('sqlite3').verbose();
+    db = new sqlite3.Database(':memory:', (err) => {
+        if (err) console.error('Erro ao criar BD em memoria:', err);
+        else console.log('✓ BD em memoria (volatil) - modo prototipo');
+    });
+    memorySeedPath = path.join(__dirname, 'data', 'employees-seed.json');
 } else {
     const sqlite3 = require('sqlite3').verbose();
-    const isVercel = process.env.VERCEL === '1';
-    const DB_DIR = isVercel ? '/tmp' : path.join(__dirname, 'db');
+    const DB_DIR = path.join(__dirname, 'db');
     const DB_PATH = path.join(DB_DIR, 'hr.db');
 
-    if (!isVercel && !fs.existsSync(DB_DIR)) {
+    if (!fs.existsSync(DB_DIR)) {
         fs.mkdirSync(DB_DIR, { recursive: true });
     }
 
@@ -316,8 +328,37 @@ async function createDefaultData() {
                 ['joao.silva', userHash, 'user', employeeId]);
             console.log('✓ Utilizador demo criado (joao.silva / 123456)');
         }
+
+        // Modo memoria: carregar seed de colaboradores
+        if (memorySeedPath && fs.existsSync(memorySeedPath)) {
+            await loadMemorySeed();
+        }
     } catch (err) {
         console.error('Erro ao criar dados padrão:', err);
+    }
+}
+
+async function loadMemorySeed() {
+    try {
+        const seed = JSON.parse(fs.readFileSync(memorySeedPath, 'utf8'));
+        if (!Array.isArray(seed) || seed.length === 0) return;
+
+        // Verificar se ja existem (evita duplicar em re-runs)
+        const existing = await getAsync("SELECT COUNT(*) as n FROM employees WHERE meca IS NOT NULL");
+        if (existing && existing.n >= seed.length) return;
+
+        // Campos comuns a todos
+        const cols = Object.keys(seed[0]).filter(k => k !== 'id');
+        const placeholders = cols.map(() => '?').join(', ');
+        const sql = `INSERT OR IGNORE INTO employees (${cols.join(', ')}, salary) VALUES (${placeholders}, 0)`;
+
+        for (const emp of seed) {
+            const vals = cols.map(c => emp[c] === undefined ? null : emp[c]);
+            await runAsync(sql, vals);
+        }
+        console.log(`✓ Seed em memoria: ${seed.length} colaboradores carregados`);
+    } catch (err) {
+        console.error('Erro ao carregar seed:', err);
     }
 }
 
