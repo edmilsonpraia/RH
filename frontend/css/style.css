@@ -173,6 +173,28 @@ body {
     padding: 12px 10px;
 }
 
+.nav-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-500);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 16px 12px 6px;
+    user-select: none;
+    transition: opacity 0.15s ease;
+}
+
+.nav-group-label:first-child {
+    padding-top: 4px;
+}
+
+.sidebar.collapsed .nav-group-label {
+    opacity: 0;
+    height: 4px;
+    padding: 0;
+    overflow: hidden;
+}
+
 .nav-item {
     padding: 9px 12px;
     cursor: pointer;

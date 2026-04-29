@@ -34,10 +34,17 @@
             </div>
 
             <nav class="sidebar-nav">
+                <div class="nav-group-label">Gestão</div>
                 <div class="nav-item active" data-module="dashboard" data-label="Dashboard">
                     <i class="codicon codicon-dashboard"></i>
                     <span class="nav-item-label">Dashboard</span>
                 </div>
+                <div class="nav-item" data-module="rsDashboard" data-label="Dashboard R&S">
+                    <i class="codicon codicon-pulse"></i>
+                    <span class="nav-item-label">Dashboard R&amp;S</span>
+                </div>
+
+                <div class="nav-group-label">Pessoas</div>
                 <div class="nav-item" data-module="employees" data-label="Colaboradores">
                     <i class="codicon codicon-organization"></i>
                     <span class="nav-item-label">Colaboradores</span>
@@ -46,13 +53,15 @@
                     <i class="codicon codicon-key"></i>
                     <span class="nav-item-label">Utilizadores</span>
                 </div>
-                <div class="nav-item" data-module="attendance" data-label="Assiduidade">
-                    <i class="codicon codicon-watch"></i>
-                    <span class="nav-item-label">Assiduidade</span>
+
+                <div class="nav-group-label">Ciclo de Vida</div>
+                <div class="nav-item" data-module="talentScouting" data-label="Talent Scouting">
+                    <i class="codicon codicon-target"></i>
+                    <span class="nav-item-label">Talent Scouting</span>
                 </div>
-                <div class="nav-item" data-module="leave" data-label="Férias">
-                    <i class="codicon codicon-calendar"></i>
-                    <span class="nav-item-label">Férias</span>
+                <div class="nav-item" data-module="requisitions" data-label="Pedidos de Recrutamento">
+                    <i class="codicon codicon-checklist"></i>
+                    <span class="nav-item-label">Pedidos de Recrutamento</span>
                 </div>
                 <div class="nav-item" data-module="recruitment" data-label="Recrutamento">
                     <i class="codicon codicon-search"></i>
@@ -62,6 +71,28 @@
                     <i class="codicon codicon-rocket"></i>
                     <span class="nav-item-label">Onboarding</span>
                 </div>
+                <div class="nav-item" data-module="evaluations" data-label="Avaliações & 9-Box">
+                    <i class="codicon codicon-graph-line"></i>
+                    <span class="nav-item-label">Avaliações &amp; 9-Box</span>
+                </div>
+                <div class="nav-item" data-module="mobility" data-label="Mobilidade Interna">
+                    <i class="codicon codicon-arrow-swap"></i>
+                    <span class="nav-item-label">Mobilidade Interna</span>
+                </div>
+                <div class="nav-item" data-module="offboarding" data-label="Offboarding">
+                    <i class="codicon codicon-sign-out"></i>
+                    <span class="nav-item-label">Offboarding</span>
+                </div>
+
+                <div class="nav-group-label">Operações</div>
+                <div class="nav-item" data-module="attendance" data-label="Assiduidade">
+                    <i class="codicon codicon-watch"></i>
+                    <span class="nav-item-label">Assiduidade</span>
+                </div>
+                <div class="nav-item" data-module="leave" data-label="Férias">
+                    <i class="codicon codicon-calendar"></i>
+                    <span class="nav-item-label">Férias</span>
+                </div>
                 <div class="nav-item" data-module="payroll" data-label="Folha de Pagamento">
                     <i class="codicon codicon-credit-card"></i>
                     <span class="nav-item-label">Folha de Pagamento</span>
@@ -70,9 +101,15 @@
                     <i class="codicon codicon-star-full"></i>
                     <span class="nav-item-label">Desempenho</span>
                 </div>
+
+                <div class="nav-group-label">Governança</div>
                 <div class="nav-item" data-module="reports" data-label="Relatórios">
                     <i class="codicon codicon-graph"></i>
                     <span class="nav-item-label">Relatórios</span>
+                </div>
+                <div class="nav-item" data-module="audit" data-label="Auditoria">
+                    <i class="codicon codicon-history"></i>
+                    <span class="nav-item-label">Auditoria</span>
                 </div>
             </nav>
 
@@ -194,6 +231,13 @@
                 <div id="payrollModule" class="hidden"></div>
                 <div id="performanceModule" class="hidden"></div>
                 <div id="reportsModule" class="hidden"></div>
+                <div id="requisitionsModule" class="hidden"></div>
+                <div id="mobilityModule" class="hidden"></div>
+                <div id="offboardingModule" class="hidden"></div>
+                <div id="rsDashboardModule" class="hidden"></div>
+                <div id="auditModule" class="hidden"></div>
+                <div id="talentScoutingModule" class="hidden"></div>
+                <div id="evaluationsModule" class="hidden"></div>
             </div>
         </main>
     </div>
@@ -209,7 +253,14 @@
             onboarding: {},
             payroll: {},
             performance: {},
-            reports: {}
+            reports: {},
+            requisitions: {},
+            mobility: {},
+            offboarding: {},
+            rsDashboard: {},
+            audit: {},
+            talentScouting: {},
+            evaluations: {}
         };
     </script>
 
@@ -224,6 +275,13 @@
     <script src="js/payroll.js"></script>
     <script src="js/performance.js"></script>
     <script src="js/reports.js"></script>
+    <script src="js/requisitions.js"></script>
+    <script src="js/mobility.js"></script>
+    <script src="js/offboarding.js"></script>
+    <script src="js/rs-dashboard.js"></script>
+    <script src="js/audit.js"></script>
+    <script src="js/talent-scouting.js"></script>
+    <script src="js/evaluations.js"></script>
 
     <script>
         // Inicialização
@@ -323,21 +381,7 @@
             });
 
             // Mostrar módulo selecionado
-            const moduleMap = {
-                'dashboard': 'dashboard',
-                'employees': 'employees',
-                'users': 'users',
-                'attendance': 'attendance',
-                'leave': 'leave',
-                'recruitment': 'recruitment',
-                'onboarding': 'onboarding',
-                'payroll': 'payroll',
-                'performance': 'performance',
-                'reports': 'reports'
-            };
-
-            const targetModule = moduleMap[module];
-            document.getElementById(`${targetModule}Module`).classList.remove('hidden');
+            document.getElementById(`${module}Module`).classList.remove('hidden');
 
             // Atualizar título
             const titles = {
@@ -350,9 +394,16 @@
                 'onboarding': 'Onboarding & Offboarding',
                 'payroll': 'Folha de Pagamento',
                 'performance': 'Avaliação de Desempenho',
-                'reports': 'Relatórios'
+                'reports': 'Relatórios',
+                'requisitions': 'Pedidos de Recrutamento',
+                'mobility': 'Mobilidade Interna',
+                'offboarding': 'Offboarding & Despedimentos',
+                'rsDashboard': 'Dashboard Recrutamento e Selecção',
+                'audit': 'Auditoria',
+                'talentScouting': 'Talent Scouting · Banco de Talentos',
+                'evaluations': 'Avaliações & Acompanhamento (9-Box)'
             };
-            document.getElementById('pageTitle').textContent = titles[module];
+            document.getElementById('pageTitle').textContent = titles[module] || module;
 
             // Carregar dados do módulo
             if (MODULES[module] && MODULES[module].load) {
