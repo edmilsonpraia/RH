@@ -1,5 +1,8 @@
 -- =====================================================
 -- Função RPC para execução de raw SQL (necessária para o backend Express)
+-- v3: Corrigir deteção SELECT/INSERT/RETURNING.
+--     Em PostgreSQL \b = backspace (NAO word boundary), usar \y.
+--
 -- Cole no SQL Editor do Supabase e execute (Run).
 -- =====================================================
 
@@ -11,7 +14,8 @@ SET search_path = public, pg_catalog
 AS $$
 DECLARE
     final_q text := sql;
-    i int := 0;
+    n_args int;
+    i int;
     arg jsonb;
     rows_result jsonb;
     changes int := 0;
@@ -22,12 +26,14 @@ DECLARE
     placeholder text;
     replacement text;
 BEGIN
-    -- Substituir placeholders $1, $2, ... pelos argumentos (com escape correto)
-    FOR arg IN SELECT value FROM jsonb_array_elements(COALESCE(args, '[]'::jsonb)) LOOP
-        i := i + 1;
-        placeholder := '\$' || i::text || '(?!\d)';
+    n_args := jsonb_array_length(COALESCE(args, '[]'::jsonb));
 
-        IF jsonb_typeof(arg) = 'null' THEN
+    -- Substituir do MAIOR para o menor (evita $1 apanhar '1' de $10)
+    FOR i IN REVERSE n_args..1 LOOP
+        arg := args -> (i - 1);
+        placeholder := '$' || i::text;
+
+        IF arg IS NULL OR jsonb_typeof(arg) = 'null' THEN
             replacement := 'NULL';
         ELSIF jsonb_typeof(arg) IN ('number', 'boolean') THEN
             replacement := arg::text;
@@ -35,27 +41,25 @@ BEGIN
             replacement := quote_literal(arg #>> '{}');
         END IF;
 
-        final_q := regexp_replace(final_q, placeholder, replacement, 'g');
+        final_q := replace(final_q, placeholder, replacement);
     END LOOP;
 
-    is_select := final_q ~* '^\s*SELECT\b';
-    is_insert := final_q ~* '^\s*INSERT\b';
-    is_returning := final_q ~* '\bRETURNING\b';
+    -- \y = word boundary em PostgreSQL (NAO \b que e backspace)
+    is_select := final_q ~* '^\s*SELECT\y';
+    is_insert := final_q ~* '^\s*INSERT\y';
+    is_returning := final_q ~* '\yRETURNING\y';
 
     IF is_select THEN
-        -- Embrulhar em jsonb_agg para devolver linhas
         EXECUTE 'SELECT COALESCE(jsonb_agg(row_to_json(t)::jsonb), ''[]''::jsonb) FROM (' || final_q || ') t'
         INTO rows_result;
-        RETURN jsonb_build_object('rows', rows_result, 'changes', 0, 'lastID', 0);
+        RETURN jsonb_build_object('rows', COALESCE(rows_result, '[]'::jsonb), 'changes', 0, 'lastID', 0);
 
     ELSIF is_insert AND NOT is_returning THEN
-        -- Auto-adicionar RETURNING id para obter lastID
         BEGIN
             EXECUTE final_q || ' RETURNING id' INTO last_id;
             GET DIAGNOSTICS changes = ROW_COUNT;
         EXCEPTION
             WHEN undefined_column OR feature_not_supported THEN
-                -- Tabela sem coluna id (raro): executar sem RETURNING
                 EXECUTE final_q;
                 GET DIAGNOSTICS changes = ROW_COUNT;
                 last_id := 0;
@@ -63,7 +67,6 @@ BEGIN
         RETURN jsonb_build_object('rows', '[]'::jsonb, 'changes', changes, 'lastID', last_id);
 
     ELSE
-        -- UPDATE / DELETE / outros
         EXECUTE final_q;
         GET DIAGNOSTICS changes = ROW_COUNT;
         RETURN jsonb_build_object('rows', '[]'::jsonb, 'changes', changes, 'lastID', 0);
@@ -74,9 +77,8 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Restringir ao service_role (secret key) - publishable nao tem acesso
 REVOKE ALL ON FUNCTION public.app_sql(text, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.app_sql(text, jsonb) TO service_role;
 
--- Confirmar instalacao
-SELECT 'app_sql function instalada' AS status;
+-- Teste
+SELECT app_sql('SELECT id, username, role FROM users WHERE username = $1', '["admin"]'::jsonb) AS teste;
