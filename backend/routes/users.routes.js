@@ -117,4 +117,45 @@ router.put('/change-password', verifyToken, async (req, res) => {
     }
 });
 
+// Alterar role de utilizador (apenas admin pode promover/despromover)
+router.put('/:id/role', verifyToken, requireAdmin, (req, res) => {
+    const { role } = req.body;
+    const targetId = parseInt(req.params.id);
+
+    if (!['admin', 'user'].includes(role)) {
+        return res.status(400).json({ error: 'Role inválido. Use "admin" ou "user".' });
+    }
+    if (targetId === req.user.id && role !== 'admin') {
+        return res.status(400).json({ error: 'Não pode despromover-se a si próprio.' });
+    }
+
+    db.run(
+        "UPDATE users SET role = ? WHERE id = ?",
+        [role, targetId],
+        function(err) {
+            if (err) return res.status(500).json({ error: 'Erro ao atualizar role' });
+            if (this.changes === 0) return res.status(404).json({ error: 'Utilizador não encontrado' });
+
+            addAuditLog(req.user.id, 'ROLE_CHANGE', 'users', targetId, `Novo role: ${role}`);
+            res.json({ message: `Role atualizado para "${role}"`, role });
+        }
+    );
+});
+
+// Eliminar utilizador (apenas admin)
+router.delete('/:id', verifyToken, requireAdmin, (req, res) => {
+    const targetId = parseInt(req.params.id);
+    if (targetId === req.user.id) {
+        return res.status(400).json({ error: 'Não pode eliminar a sua própria conta.' });
+    }
+
+    db.run("DELETE FROM users WHERE id = ?", [targetId], function(err) {
+        if (err) return res.status(500).json({ error: 'Erro ao eliminar' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Não encontrado' });
+
+        addAuditLog(req.user.id, 'DELETE', 'users', targetId, 'Utilizador eliminado');
+        res.json({ message: 'Eliminado' });
+    });
+});
+
 module.exports = router;

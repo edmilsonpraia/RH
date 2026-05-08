@@ -1,20 +1,28 @@
 // Módulo de Gestão de Utilizadores
 
 MODULES.users = {
+    items: [],
+    currentUserId: null,
+
     async load() {
+        const me = AUTH.getUser();
+        this.currentUserId = me ? me.id : null;
         const container = document.getElementById('usersModule');
         container.innerHTML = `
             <div class="card">
                 <div class="card-header">
                     <h2>Gestão de Utilizadores</h2>
                     <button class="btn btn-primary btn-sm" onclick="MODULES.users.showCreateForm()">
-                        ➕ Criar Utilizador
+                        <i class="codicon codicon-add"></i> Criar Utilizador (vincular a colaborador)
                     </button>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info">
-                        <strong>ℹ️ Como funciona:</strong> Primeiro crie o colaborador, depois crie o utilizador vinculado a ele.
-                        <br>Utilizadores do tipo "user" têm acesso ao portal de auto-serviço.
+                        <i class="codicon codicon-info"></i>
+                        <span>
+                            <strong>Auto-registo:</strong> qualquer pessoa pode criar conta em <code>/signup.html</code>.
+                            Aqui podes <strong>promover utilizadores a Admin</strong> ou despromover.
+                        </span>
                     </div>
                     <div id="usersGrid"></div>
                 </div>
@@ -26,32 +34,92 @@ MODULES.users = {
     async loadData() {
         try {
             UI.showLoading();
-            const data = await API.users.getAll();
+            this.items = await API.users.getAll();
             UI.hideLoading();
-
-            const columns = [
-                { key: 'username', label: 'Username' },
-                { key: 'employee_name', label: 'Colaborador', render: (row) => row.employee_name || '-' },
-                { key: 'position', label: 'Cargo', render: (row) => row.position || '-' },
-                {
-                    key: 'role',
-                    label: 'Tipo',
-                    render: (row) => `<span class="badge badge-${row.role === 'admin' ? 'warning' : 'info'}">${row.role === 'admin' ? 'Admin' : 'Usuário'}</span>`
-                },
-                { key: 'created_at', label: 'Criado em', render: (row) => UI.formatDate(row.created_at) }
-            ];
-
-            const actions = `
-                <button class="btn btn-primary btn-sm" onclick="MODULES.users.showCreateForm()">
-                    ➕ Criar Utilizador
-                </button>
-            `;
-
-            UI.renderDataGrid(data, columns, 'usersGrid', { actions });
+            this.render();
         } catch (error) {
             UI.hideLoading();
             UI.showToast('Erro ao carregar utilizadores', 'error');
         }
+    },
+
+    render() {
+        const container = document.getElementById('usersGrid');
+        if (!this.items.length) {
+            container.innerHTML = `<div class="grid-empty"><i class="codicon codicon-account"></i><p>Sem utilizadores.</p></div>`;
+            return;
+        }
+        const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        const rows = this.items.map(u => {
+            const isMe = u.id === this.currentUserId;
+            const isAdmin = u.role === 'admin';
+            const roleBadge = isAdmin
+                ? `<span class="badge" style="background:#fef3c7; color:#92400e;"><i class="codicon codicon-shield"></i> Admin</span>`
+                : `<span class="badge" style="background:#dbeafe; color:#1e40af;"><i class="codicon codicon-account"></i> Utilizador</span>`;
+
+            const promoteBtn = isAdmin
+                ? `<button class="btn-icon" style="color:#64748b;" onclick="MODULES.users.changeRole(${u.id}, 'user', '${escape(u.username).replace(/'/g, "&#39;")}')" title="Despromover a utilizador" ${isMe ? 'disabled' : ''}><i class="codicon codicon-arrow-down"></i></button>`
+                : `<button class="btn-icon" style="color:#f59e0b;" onclick="MODULES.users.changeRole(${u.id}, 'admin', '${escape(u.username).replace(/'/g, "&#39;")}')" title="Promover a admin"><i class="codicon codicon-shield"></i></button>`;
+
+            const deleteBtn = isMe
+                ? ''
+                : `<button class="btn-icon delete" onclick="MODULES.users.confirmDelete(${u.id}, '${escape(u.username).replace(/'/g, "&#39;")}')" title="Eliminar utilizador"><i class="codicon codicon-trash"></i></button>`;
+
+            return `
+                <tr>
+                    <td><strong>${escape(u.username)}</strong>${isMe ? ' <span style="font-size:11px; color:var(--ink-500);">(tu)</span>' : ''}</td>
+                    <td>${escape(u.employee_name || '-')}</td>
+                    <td>${escape(u.position || '-')}</td>
+                    <td>${roleBadge}</td>
+                    <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('pt-PT') : '-'}</td>
+                    <td class="actions">
+                        ${promoteBtn}
+                        ${deleteBtn}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="grid-container">
+                <table class="data-grid">
+                    <thead><tr><th>Username (email)</th><th>Colaborador</th><th>Cargo</th><th>Role</th><th>Criado</th><th>Ações</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    },
+
+    changeRole(id, newRole, username) {
+        const verb = newRole === 'admin' ? 'promover a Admin' : 'despromover a Utilizador';
+        UI.confirm(`Tem a certeza que deseja ${verb} "${username}"?`, async () => {
+            try {
+                UI.showLoading();
+                await API.users.changeRole(id, newRole);
+                UI.hideLoading();
+                UI.showToast(`Role atualizado: ${newRole}`, 'success');
+                this.loadData();
+            } catch (e) {
+                UI.hideLoading();
+                UI.showToast(e.message, 'error');
+            }
+        });
+    },
+
+    confirmDelete(id, username) {
+        UI.confirm(`Eliminar permanentemente o utilizador "${username}"? O colaborador associado mantém-se.`, async () => {
+            try {
+                UI.showLoading();
+                await API.users.delete(id);
+                UI.hideLoading();
+                UI.showToast('Utilizador eliminado', 'success');
+                this.loadData();
+            } catch (e) {
+                UI.hideLoading();
+                UI.showToast(e.message, 'error');
+            }
+        });
     },
 
     async showCreateForm() {

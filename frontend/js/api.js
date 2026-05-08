@@ -111,6 +111,18 @@ const API = {
         },
         changePassword(data) {
             return API.put('/users/change-password', data);
+        },
+        changeRole(id, role) {
+            return API.put(`/users/${id}/role`, { role });
+        },
+        delete(id) {
+            return API.delete(`/users/${id}`);
+        }
+    },
+
+    auth: {
+        signup(data) {
+            return API.post('/auth/signup', data);
         }
     },
 

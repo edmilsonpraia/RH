@@ -16,10 +16,18 @@ const TURSO_URL = process.env.TURSO_DATABASE_URL;
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
 const useTurso = !!TURSO_URL;
 
-// MEMORY_MODE: true se MEMORY_MODE=1 ou se estiver na Vercel sem Turso
-// (evita escrever em /tmp que e efemero)
+// Supabase via SDK (URL + secret key, usa RPC app_sql)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SECRET = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY;
+const useSupabaseSdk = !!(SUPABASE_URL && SUPABASE_SECRET);
+
+// Postgres direct (alternativa avancada via DATABASE_URL)
+const PG_URL = process.env.DATABASE_URL;
+const usePostgres = !!PG_URL && !useSupabaseSdk;
+
+// MEMORY_MODE: ativo se MEMORY_MODE=1 ou se estiver na Vercel sem outra BD
 const isVercel = process.env.VERCEL === '1';
-const useMemory = process.env.MEMORY_MODE === '1' || (isVercel && !useTurso);
+const useMemory = process.env.MEMORY_MODE === '1' || (isVercel && !useTurso && !usePostgres && !useSupabaseSdk);
 
 let resolveDbReady;
 const dbReady = new Promise((resolve) => { resolveDbReady = resolve; });
@@ -27,7 +35,13 @@ const dbReady = new Promise((resolve) => { resolveDbReady = resolve; });
 let db;
 let memorySeedPath = null;
 
-if (useTurso) {
+if (useSupabaseSdk) {
+    db = createSupabaseShim();
+    console.log(`✓ Conectado ao Supabase (SDK): ${SUPABASE_URL}`);
+} else if (usePostgres) {
+    db = createPostgresShim();
+    console.log(`✓ Conectado a Postgres direto: ${maskUrl(PG_URL)}`);
+} else if (useTurso) {
     db = createTursoShim();
     console.log(`✓ Conectado ao Turso (${TURSO_URL})`);
 } else if (useMemory) {
@@ -120,6 +134,195 @@ function createTursoShim() {
     };
 }
 
+function maskUrl(url) {
+    return (url || '').replace(/:[^:@]+@/, ':***@');
+}
+
+/**
+ * Shim Supabase (via SDK + RPC app_sql).
+ * Funciona em qualquer rede (HTTPS), ideal para Vercel.
+ * Requer:
+ *   - SUPABASE_URL + SUPABASE_SECRET_KEY no .env
+ *   - Funcao Postgres `app_sql` (ver backend/data/supabase-rpc.sql)
+ */
+function createSupabaseShim() {
+    const { createClient } = require('@supabase/supabase-js');
+    const sb = createClient(SUPABASE_URL, SUPABASE_SECRET, {
+        auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Adapta SQLite-isms para Postgres antes de enviar
+    const adaptSql = (sql) => {
+        let s = sql;
+        // Placeholders ? -> $1, $2, ...
+        let i = 0;
+        s = s.replace(/\?/g, () => `$${++i}`);
+        // strftime -> to_char
+        s = s.replace(/strftime\('%Y-%m',\s*([^)]+)\)/gi, "to_char($1::timestamp, 'YYYY-MM')");
+        s = s.replace(/strftime\('%m',\s*([^)]+)\)/gi, "to_char($1::timestamp, 'MM')");
+        s = s.replace(/strftime\('%Y',\s*([^)]+)\)/gi, "to_char($1::timestamp, 'YYYY')");
+        // julianday -> EPOCH/86400
+        s = s.replace(/julianday\(([^)]+)\)/gi, '(EXTRACT(EPOCH FROM ($1::timestamp))/86400)');
+        // CURRENT_DATE -> CURRENT_DATE (compativel)
+        // CURRENT_TIMESTAMP -> NOW()
+        return s;
+    };
+
+    const normalizeArgs = (params) => {
+        if (params == null) return [];
+        if (!Array.isArray(params)) return [params];
+        return params.map(p => p === undefined ? null : p);
+    };
+
+    const exec = async (sql, params, callback, mode) => {
+        try {
+            const adapted = adaptSql(sql);
+            const args = normalizeArgs(params);
+
+            const { data, error } = await sb.rpc('app_sql', { sql: adapted, args });
+
+            if (error) {
+                if (mode === 'get' || mode === 'all') return callback && callback(error);
+                return callback && callback.call({}, error);
+            }
+
+            const result = data || { rows: [], changes: 0, lastID: 0 };
+            const rows = result.rows || [];
+
+            if (mode === 'get') return callback && callback(null, rows[0]);
+            if (mode === 'all') return callback && callback(null, rows);
+            const ctx = {
+                lastID: Number(result.lastID || 0),
+                changes: Number(result.changes || 0)
+            };
+            callback && callback.call(ctx, null);
+        } catch (err) {
+            if (mode === 'get' || mode === 'all') return callback && callback(err);
+            callback && callback.call({}, err);
+        }
+    };
+
+    return {
+        run(sql, params, callback) {
+            if (typeof params === 'function') { callback = params; params = []; }
+            exec(sql, params, callback, 'run');
+        },
+        get(sql, params, callback) {
+            if (typeof params === 'function') { callback = params; params = []; }
+            exec(sql, params, callback, 'get');
+        },
+        all(sql, params, callback) {
+            if (typeof params === 'function') { callback = params; params = []; }
+            exec(sql, params, callback, 'all');
+        },
+        serialize(fn) { fn(); },
+        prepare(sql) {
+            return {
+                run(params, callback) {
+                    if (typeof params === 'function') { callback = params; params = []; }
+                    exec(sql, params, callback, 'run');
+                },
+                finalize(cb) { if (cb) cb(); }
+            };
+        },
+        _supabase: sb
+    };
+}
+
+function createPostgresShim() {
+    const { Pool } = require('pg');
+    const pool = new Pool({
+        connectionString: PG_URL,
+        ssl: { rejectUnauthorized: false }  // Supabase requer SSL
+    });
+
+    // Converte placeholders SQLite (?) para Postgres ($1, $2, ...)
+    const convertPlaceholders = (sql) => {
+        let i = 0;
+        return sql.replace(/\?/g, () => `$${++i}`);
+    };
+
+    // Converte CURRENT_TIMESTAMP para NOW() onde necessário (compativel)
+    // strftime('%Y-%m', col) -> to_char(col, 'YYYY-MM')
+    // strftime('%m', col) -> to_char(col, 'MM')
+    // strftime('%Y', col) -> to_char(col, 'YYYY')
+    const adaptSql = (sql) => {
+        let s = sql;
+        s = s.replace(/strftime\('%Y-%m',\s*([^)]+)\)/gi, "to_char($1, 'YYYY-MM')");
+        s = s.replace(/strftime\('%m',\s*([^)]+)\)/gi, "to_char($1, 'MM')");
+        s = s.replace(/strftime\('%Y',\s*([^)]+)\)/gi, "to_char($1, 'YYYY')");
+        s = s.replace(/julianday\(([^)]+)\)/gi, 'EXTRACT(EPOCH FROM ($1))/86400');
+        // CASE WHEN ... IS NOT NULL THEN 1 ELSE 0 END -> mantem (compativel)
+        // LIMIT ? OFFSET ? -> mantem
+        // ORDER BY ... NULLS LAST -> mantem (Postgres suporta)
+        return s;
+    };
+
+    const normalizeArgs = (params) => {
+        if (params == null) return [];
+        if (!Array.isArray(params)) return [params];
+        return params.map(p => p === undefined ? null : p);
+    };
+
+    const buildContext = (res) => ({
+        // Postgres nao retorna lastInsertRowid automaticamente em INSERT
+        // Para INSERT obtemos via RETURNING id (acrescentado abaixo se faltar)
+        lastID: res.rows && res.rows[0] && res.rows[0].id != null ? Number(res.rows[0].id) : 0,
+        changes: res.rowCount || 0
+    });
+
+    const exec = (sql, params, callback, mode) => {
+        let q = adaptSql(sql);
+        q = convertPlaceholders(q);
+
+        // Para INSERT sem RETURNING, adicionar para obter o id
+        const isInsert = /^\s*INSERT\b/i.test(q);
+        const hasReturning = /\bRETURNING\b/i.test(q);
+        if (isInsert && !hasReturning && mode === 'run') {
+            q = q.replace(/;?\s*$/, ' RETURNING id');
+        }
+
+        pool.query(q, normalizeArgs(params))
+            .then(res => {
+                if (!callback) return;
+                if (mode === 'get') return callback(null, res.rows[0]);
+                if (mode === 'all') return callback(null, res.rows || []);
+                callback.call(buildContext(res), null);
+            })
+            .catch(err => {
+                if (!callback) return;
+                if (mode === 'get' || mode === 'all') callback(err);
+                else callback.call({}, err);
+            });
+    };
+
+    return {
+        run(sql, params, callback) {
+            if (typeof params === 'function') { callback = params; params = []; }
+            exec(sql, params, callback, 'run');
+        },
+        get(sql, params, callback) {
+            if (typeof params === 'function') { callback = params; params = []; }
+            exec(sql, params, callback, 'get');
+        },
+        all(sql, params, callback) {
+            if (typeof params === 'function') { callback = params; params = []; }
+            exec(sql, params, callback, 'all');
+        },
+        serialize(fn) { fn(); },
+        prepare(sql) {
+            return {
+                run(params, callback) {
+                    if (typeof params === 'function') { callback = params; params = []; }
+                    exec(sql, params, callback, 'run');
+                },
+                finalize(cb) { if (cb) cb(); }
+            };
+        },
+        _pool: pool
+    };
+}
+
 // Helper async para serializar a inicializacao
 function runAsync(sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -137,6 +340,41 @@ function getAsync(sql, params = []) {
 }
 
 async function initializeDatabase() {
+    // Supabase SDK: schema e dados ja foram aplicados pelo user via SQL Editor.
+    // So validar que app_sql existe e a BD esta acessivel.
+    if (useSupabaseSdk) {
+        try {
+            const test = await new Promise((resolve, reject) => {
+                db.get('SELECT 1 as ok', [], (err, row) => err ? reject(err) : resolve(row));
+            });
+            if (test && test.ok === 1) {
+                console.log('✓ RPC app_sql operacional');
+            }
+        } catch (err) {
+            console.error('⚠ Falha ao validar Supabase. Aplicaste backend/data/supabase-rpc.sql no SQL Editor?');
+            console.error('  Erro:', err.message);
+        }
+        resolveDbReady();
+        return;
+    }
+
+    // Postgres direto: aplicar schema-postgres.sql diretamente
+    if (usePostgres) {
+        const schemaPath = path.join(__dirname, 'schema-postgres.sql');
+        if (fs.existsSync(schemaPath)) {
+            const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+            try {
+                await db._pool.query(schemaSql);
+                console.log('✓ Schema Postgres aplicado');
+            } catch (err) {
+                console.error('Erro ao aplicar schema Postgres:', err.message);
+            }
+        }
+        await createDefaultData();
+        resolveDbReady();
+        return;
+    }
+
     const tables = [
         `CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
