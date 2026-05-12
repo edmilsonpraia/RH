@@ -142,6 +142,17 @@ const API = {
         },
         delete(id) {
             return API.delete(`/employees/${id}`);
+        },
+        async loadPhotoUrl(id) {
+            const token = AUTH.getToken();
+            try {
+                const r = await fetch(`/api/employees/${id}/photo`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!r.ok) return null;
+                const blob = await r.blob();
+                return URL.createObjectURL(blob);
+            } catch { return null; }
         }
     },
 
@@ -189,6 +200,27 @@ const API = {
         },
         openDocument(id, idx, fileName) {
             return API.openFile(`/recruitment/${id}/documents/${idx}`, fileName);
+        },
+        photoUrl(id) {
+            // Para usar em <img src> via fetch + blob (autenticado)
+            return `/recruitment/${id}/photo`;
+        },
+        changeStatus(id, status) {
+            return API.request(`/recruitment/${id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
+        },
+        async loadPhotoUrl(id) {
+            const token = AUTH.getToken();
+            try {
+                const r = await fetch(`/api/recruitment/${id}/photo`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!r.ok) return null;
+                const blob = await r.blob();
+                return URL.createObjectURL(blob);
+            } catch { return null; }
         }
     },
 
@@ -311,7 +343,26 @@ const API = {
         convert(id, position_title) { return API.post(`/talent-pool/${id}/convert`, { position_title }); },
         delete(id) { return API.delete(`/talent-pool/${id}`); },
         openCv(id, fileName) { return API.openFile(`/talent-pool/${id}/cv`, fileName); },
-        openDocument(id, idx, fileName) { return API.openFile(`/talent-pool/${id}/documents/${idx}`, fileName); }
+        openDocument(id, idx, fileName) { return API.openFile(`/talent-pool/${id}/documents/${idx}`, fileName); },
+        photoUrl(id) { return `/talent-pool/${id}/photo`; },
+        changeStatus(id, status) {
+            return API.request(`/talent-pool/${id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
+        },
+        // Carrega foto via fetch autenticado e devolve um objectURL para <img src>
+        async loadPhotoUrl(id) {
+            const token = AUTH.getToken();
+            try {
+                const r = await fetch(`/api/talent-pool/${id}/photo`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!r.ok) return null;
+                const blob = await r.blob();
+                return URL.createObjectURL(blob);
+            } catch { return null; }
+        }
     },
 
     evaluations: {

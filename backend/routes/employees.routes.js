@@ -84,7 +84,8 @@ const EXTRA_FIELDS = [
     'meca', 'document_type', 'document_number', 'document_expiry', 'document_status',
     'nationality', 'birth_date', 'gender', 'contract_type', 'contract_duration_days',
     'seniority', 'last_renewal_date', 'next_renewal_date', 'contract_status',
-    'activity_type', 'site', 'company', 'children', 'academic_degree'
+    'activity_type', 'site', 'company', 'children', 'academic_degree',
+    'photo_data', 'photo_mime_type'
 ];
 
 // Criar colaborador (apenas Admin)
@@ -196,6 +197,27 @@ router.delete('/:id', verifyToken, requireAdmin, (req, res) => {
             addAuditLog(req.user.id, 'DELETE', 'employees', id, 'Colaborador marcado como inativo');
 
             res.json({ message: 'Colaborador eliminado com sucesso' });
+        }
+    );
+});
+
+// Download da foto do colaborador (inline)
+router.get('/:id/photo', verifyToken, (req, res) => {
+    const { id } = req.params;
+    // User comum so pode ver a sua propria foto
+    if (req.user.role !== 'admin' && req.user.employeeId != id) {
+        return res.status(403).json({ error: 'Acesso negado' });
+    }
+    db.get(
+        "SELECT photo_data, photo_mime_type FROM employees WHERE id = ?",
+        [id],
+        (err, row) => {
+            if (err) return res.status(500).json({ error: 'Erro' });
+            if (!row || !row.photo_data) return res.status(404).json({ error: 'Sem foto' });
+            const buf = Buffer.from(row.photo_data, 'base64');
+            res.setHeader('Content-Type', row.photo_mime_type || 'image/jpeg');
+            res.setHeader('Cache-Control', 'private, max-age=3600');
+            res.send(buf);
         }
     );
 });

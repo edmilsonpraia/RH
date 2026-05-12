@@ -58,10 +58,6 @@ MODULES.recruitment = {
             return;
         }
         const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        const badge = st => {
-            const s = this.STATUS[st] || { label: st, color: '#666', bg: '#eee' };
-            return `<span class="badge" style="background:${s.bg}; color:${s.color};">${s.label}</span>`;
-        };
 
         const cvIcon = r => r.has_cv && r.cv_file_name
             ? `<button class="btn-icon view" onclick="event.stopPropagation(); API.recruitment.openCv(${r.id}, '${escape(r.cv_file_name).replace(/'/g, "\\'")}')" title="Abrir CV"><i class="codicon codicon-file-text" style="color:var(--brand-600);"></i></button>`
@@ -71,18 +67,32 @@ MODULES.recruitment = {
             ? `<span class="badge badge-secondary" title="${r.documents_count} documento(s)"><i class="codicon codicon-files"></i> ${r.documents_count}</span>`
             : '-';
 
+        const photoAvatar = r => {
+            if (r.has_photo) {
+                return `<div class="rec-avatar" data-id="${r.id}" style="width:36px;height:36px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;"><i class="codicon codicon-account" style="color:var(--ink-400);"></i></div>`;
+            }
+            const initial = (r.candidate_name || '?').charAt(0).toUpperCase();
+            return `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg, var(--brand-400), var(--brand-700));color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;">${initial}</div>`;
+        };
+
+        const statusDropdown = r => {
+            const opts = Object.entries(this.STATUS).map(([k, v]) =>
+                `<option value="${k}" ${k === r.status ? 'selected' : ''}>${v.label}</option>`).join('');
+            return `<select onchange="event.stopPropagation(); MODULES.recruitment.quickStatus(${r.id}, this.value)" onclick="event.stopPropagation();" style="padding:4px 8px; border:1px solid var(--ink-300); border-radius:4px; font-size:12px; background:#fff; cursor:pointer;">${opts}</select>`;
+        };
+
         const rows = this.items.map(r => `
-            <tr>
+            <tr style="cursor:pointer;" onclick="MODULES.recruitment.showDetails(${r.id})">
+                <td style="width:50px;">${photoAvatar(r)}</td>
                 <td><strong>${escape(r.candidate_name)}</strong></td>
                 <td>${escape(r.candidate_email)}</td>
                 <td>${escape(r.candidate_phone || '-')}</td>
                 <td>${escape(r.position_title)}</td>
                 <td>${r.applied_date ? new Date(r.applied_date).toLocaleDateString('pt-PT') : '-'}</td>
-                <td>${badge(r.status)}</td>
-                <td style="text-align:center;">${cvIcon(r)}</td>
+                <td onclick="event.stopPropagation();">${statusDropdown(r)}</td>
+                <td style="text-align:center;" onclick="event.stopPropagation();">${cvIcon(r)}</td>
                 <td style="text-align:center;">${docsIcon(r)}</td>
-                <td class="actions">
-                    <button class="btn-icon view" onclick="MODULES.recruitment.showDetails(${r.id})" title="Ver"><i class="codicon codicon-eye"></i></button>
+                <td class="actions" onclick="event.stopPropagation();">
                     <button class="btn-icon edit" onclick="MODULES.recruitment.showEditForm(${r.id})" title="Editar"><i class="codicon codicon-edit"></i></button>
                     <button class="btn-icon delete" onclick="MODULES.recruitment.confirmDelete(${r.id}, '${escape(r.candidate_name).replace(/'/g, "\\'")}')" title="Eliminar"><i class="codicon codicon-trash"></i></button>
                 </td>
@@ -92,11 +102,20 @@ MODULES.recruitment = {
         c.innerHTML = `
             <div class="grid-container">
                 <table class="data-grid">
-                    <thead><tr><th>Candidato</th><th>Email</th><th>Telefone</th><th>Cargo</th><th>Data</th><th>Estado</th><th>CV</th><th>Docs</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Foto</th><th>Candidato</th><th>Email</th><th>Telefone</th><th>Cargo</th><th>Data</th><th>Estado</th><th>CV</th><th>Docs</th><th>Ações</th></tr></thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>
         `;
+
+        // Carregar fotos
+        this.items.filter(r => r.has_photo).forEach(r => {
+            API.recruitment.loadPhotoUrl(r.id).then(url => {
+                if (!url) return;
+                const el = c.querySelector(`.rec-avatar[data-id="${r.id}"]`);
+                if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            });
+        });
     },
 
     showCreateForm() {
@@ -113,6 +132,12 @@ MODULES.recruitment = {
                 <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="MODULES.recruitment.update(${id})">Atualizar</button>
             `);
+            // Carregar foto existente no preview
+            if (r.has_photo) {
+                const url = await API.recruitment.loadPhotoUrl(id);
+                const el = document.getElementById('recPhotoPreview');
+                if (el && url) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            }
         } catch (e) {
             UI.showToast('Erro ao carregar', 'error');
         }
@@ -120,8 +145,20 @@ MODULES.recruitment = {
 
     getFormHTML(d = {}) {
         const sel = (val, current) => val === current ? 'selected' : '';
+        const photoPreview = d.id && d.has_photo
+            ? `<div id="recPhotoPreview" data-id="${d.id}" style="width:80px;height:80px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;"><i class="codicon codicon-loading codicon-modifier-spin"></i></div>`
+            : `<div id="recPhotoPreview" style="width:80px;height:80px;border-radius:50%;background:var(--ink-100);display:inline-flex;align-items:center;justify-content:center;color:var(--ink-400);"><i class="codicon codicon-account" style="font-size:32px;"></i></div>`;
+
         return `
             <form id="recForm">
+                <div style="display:flex; align-items:center; gap:14px; padding:14px; background:var(--ink-50); border-radius:8px; margin-bottom:14px;">
+                    ${photoPreview}
+                    <div style="flex:1;">
+                        <label class="form-label" style="margin-bottom:6px;">Fotografia <span style="font-size:11px; color:var(--ink-500);">— JPG/PNG, máx 3MB</span></label>
+                        <input type="file" class="form-control" id="recPhotoFile" accept="image/*" onchange="MODULES.recruitment._previewPhoto(event)">
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Cargo / Vaga *</label>
                     <input type="text" class="form-control" id="recPosition" value="${d.position_title || ''}" required>
@@ -175,6 +212,31 @@ MODULES.recruitment = {
                 </div>
             </form>
         `;
+    },
+
+    _previewPhoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 3 * 1024 * 1024) {
+            UI.showToast('Foto excede 3MB', 'error');
+            event.target.value = '';
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        const el = document.getElementById('recPhotoPreview');
+        if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+    },
+
+    async quickStatus(id, newStatus) {
+        try {
+            await API.recruitment.changeStatus(id, newStatus);
+            const item = this.items.find(r => r.id === id);
+            if (item) item.status = newStatus;
+            UI.showToast(`Estado atualizado: ${this.STATUS[newStatus]?.label || newStatus}`, 'success');
+        } catch (e) {
+            UI.showToast(e.message || 'Erro ao mudar estado', 'error');
+            this.loadData();
+        }
     },
 
     _renderDocsList(d = {}) {
@@ -235,6 +297,15 @@ MODULES.recruitment = {
             if (docs.length) data.documents = docs;
         }
 
+        // Foto
+        const photoInput = document.getElementById('recPhotoFile');
+        if (photoInput?.files?.[0]) {
+            const f = photoInput.files[0];
+            const obj = await API.fileToObject(f);
+            data.photo_data = obj.data;
+            data.photo_mime_type = obj.mime;
+        }
+
         return data;
     },
 
@@ -251,7 +322,9 @@ MODULES.recruitment = {
             cv_file_name: data.cv_file_name,
             cv_file_data: data.cv_file_data,
             cv_mime_type: data.cv_mime_type,
-            documents: data.documents
+            documents: data.documents,
+            photo_data: data.photo_data,
+            photo_mime_type: data.photo_mime_type
         };
         try {
             UI.showLoading();
@@ -310,14 +383,27 @@ MODULES.recruitment = {
                 </div>
             `).join('');
 
+            const hasPhoto = !!r.has_photo;
+            const photoBlock = hasPhoto
+                ? `<div id="recDetailsPhoto" data-id="${r.id}" style="width:120px;height:120px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="codicon codicon-loading codicon-modifier-spin"></i></div>`
+                : `<div style="width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg, var(--brand-400), var(--brand-700));color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:48px;font-weight:600;flex-shrink:0;">${escape((r.candidate_name || '?').charAt(0).toUpperCase())}</div>`;
+
             const content = `
+                <div style="display:flex; gap:20px; align-items:center; margin-bottom:18px; padding:14px; background:var(--ink-50); border-radius:8px;">
+                    ${photoBlock}
+                    <div style="flex:1;">
+                        <h2 style="margin:0; font-size:20px;">${escape(r.candidate_name)}</h2>
+                        <div style="color:var(--ink-600); margin-top:4px;">${escape(r.position_title)}</div>
+                        <div style="margin-top:8px;">
+                            <span class="badge" style="background:${sLabel.bg}; color:${sLabel.color};">${sLabel.label}</span>
+                        </div>
+                    </div>
+                </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 20px; font-size:14px; margin-bottom:14px;">
-                    <div><strong>Nome:</strong> ${escape(r.candidate_name)}</div>
-                    <div><strong>Estado:</strong> <span class="badge" style="background:${sLabel.bg}; color:${sLabel.color};">${sLabel.label}</span></div>
                     <div><strong>Email:</strong> ${escape(r.candidate_email)}</div>
                     <div><strong>Telefone:</strong> ${fmt(r.candidate_phone)}</div>
-                    <div><strong>Cargo:</strong> ${escape(r.position_title)}</div>
                     <div><strong>Candidatura:</strong> ${r.applied_date ? new Date(r.applied_date).toLocaleDateString('pt-PT') : '-'}</div>
+                    <div><strong>Atualizado:</strong> ${r.updated_at ? new Date(r.updated_at).toLocaleString('pt-PT') : '-'}</div>
                 </div>
                 ${r.notes ? `<hr><h4 style="margin-bottom:6px;">Notas</h4><p>${escape(r.notes)}</p>` : ''}
                 <hr>
@@ -334,7 +420,16 @@ MODULES.recruitment = {
                 ` : '<p style="color:var(--ink-500); font-size:13px;">Sem CV anexado.</p>'}
                 ${docsHtml ? `<div style="margin-top:8px;"><strong style="font-size:13px;">Documentos adicionais:</strong>${docsHtml}</div>` : ''}
             `;
-            UI.createModal(r.candidate_name, content, `<button class="btn btn-outline" onclick="UI.closeModal()">Fechar</button>`);
+            UI.createModal(r.candidate_name, content, `
+                <button class="btn btn-outline" onclick="UI.closeModal()">Fechar</button>
+                <button class="btn btn-secondary btn-sm" onclick="MODULES.recruitment.showEditForm(${r.id})"><i class="codicon codicon-edit"></i> Editar</button>
+            `);
+
+            if (hasPhoto) {
+                const url = await API.recruitment.loadPhotoUrl(r.id);
+                const el = document.getElementById('recDetailsPhoto');
+                if (el && url) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            }
         } catch (e) {
             UI.showToast('Erro ao carregar', 'error');
         }

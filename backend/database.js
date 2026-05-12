@@ -710,6 +710,14 @@ async function initializeDatabase() {
     // Migracoes em talent_pool
     try { await runAsync(`ALTER TABLE talent_pool ADD COLUMN cv_mime_type TEXT`); } catch (e) {}
     try { await runAsync(`ALTER TABLE talent_pool ADD COLUMN documents TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE talent_pool ADD COLUMN photo_data TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE talent_pool ADD COLUMN photo_mime_type TEXT`); } catch (e) {}
+
+    // Migracoes para fotos em recruitment e employees
+    try { await runAsync(`ALTER TABLE recruitment ADD COLUMN photo_data TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE recruitment ADD COLUMN photo_mime_type TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE employees ADD COLUMN photo_data TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE employees ADD COLUMN photo_mime_type TEXT`); } catch (e) {}
 
     console.log('✓ Tabelas verificadas/migradas');
     await createDefaultData();

@@ -10,7 +10,8 @@ router.get('/', verifyToken, requireAdmin, (req, res) => {
                       skills, education, experience_years, current_employer, expected_salary,
                       location, status, tags, rating, consent_given, consent_expiry_date,
                       created_at, last_contacted_at, archived_at,
-                      cv_file_name, (CASE WHEN cv_text IS NOT NULL THEN 1 ELSE 0 END) as has_cv
+                      cv_file_name, (CASE WHEN cv_text IS NOT NULL THEN 1 ELSE 0 END) as has_cv,
+                      (CASE WHEN photo_data IS NOT NULL THEN 1 ELSE 0 END) as has_photo
                FROM talent_pool WHERE 1=1`;
     const params = [];
     if (status) { sql += ' AND status = ?'; params.push(status); }
@@ -67,6 +68,7 @@ router.get('/:id', verifyToken, requireAdmin, (req, res) => {
 router.post('/', verifyToken, requireAdmin, (req, res) => {
     const allowed = ['name','email','phone','position_of_interest','area','source',
         'cv_text','cv_file_name','cv_file_data','cv_mime_type','documents',
+        'photo_data','photo_mime_type',
         'skills','education','experience_years',
         'current_employer','expected_salary','location','status','tags','notes','rating',
         'consent_given','consent_expiry_date'];
@@ -93,6 +95,7 @@ router.post('/', verifyToken, requireAdmin, (req, res) => {
 router.put('/:id', verifyToken, requireAdmin, (req, res) => {
     const allowed = ['name','email','phone','position_of_interest','area','source',
         'cv_text','cv_file_name','cv_file_data','cv_mime_type','documents',
+        'photo_data','photo_mime_type',
         'skills','education','experience_years',
         'current_employer','expected_salary','location','status','tags','notes','rating',
         'consent_given','consent_expiry_date','last_contacted_at','last_contacted_by'];
@@ -161,6 +164,35 @@ router.get('/:id/cv', verifyToken, requireAdmin, (req, res) => {
             res.send(buf);
         }
     );
+});
+
+// Download da foto (inline)
+router.get('/:id/photo', verifyToken, requireAdmin, (req, res) => {
+    db.get(
+        "SELECT photo_data, photo_mime_type, name FROM talent_pool WHERE id = ?",
+        [req.params.id],
+        (err, row) => {
+            if (err) return res.status(500).json({ error: 'Erro' });
+            if (!row || !row.photo_data) return res.status(404).json({ error: 'Sem foto' });
+            const buf = Buffer.from(row.photo_data, 'base64');
+            res.setHeader('Content-Type', row.photo_mime_type || 'image/jpeg');
+            res.setHeader('Cache-Control', 'private, max-age=3600');
+            res.send(buf);
+        }
+    );
+});
+
+// Atualizar status rapidamente (inline)
+router.patch('/:id/status', verifyToken, requireAdmin, (req, res) => {
+    const { status } = req.body;
+    const valid = ['ativo','contactado','em_processo','alocado','indisponivel','arquivado'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Status invalido' });
+    db.run("UPDATE talent_pool SET status = ? WHERE id = ?", [status, req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: 'Erro' });
+        if (this.changes === 0) return res.status(404).json({ error: 'Nao encontrado' });
+        addAuditLog(req.user.id, 'UPDATE', 'talent_pool', req.params.id, `Status -> ${status}`);
+        res.json({ message: 'Atualizado', status });
+    });
 });
 
 // Download de documento individual

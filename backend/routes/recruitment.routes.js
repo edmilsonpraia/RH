@@ -10,6 +10,7 @@ router.get('/', verifyToken, requireAdmin, (req, res) => {
     let query = `SELECT id, position_title, candidate_name, candidate_email, candidate_phone,
                         status, applied_date, notes, updated_at, cv_file_name, cv_mime_type,
                         (CASE WHEN cv_file_data IS NOT NULL THEN 1 ELSE 0 END) as has_cv,
+                        (CASE WHEN photo_data IS NOT NULL THEN 1 ELSE 0 END) as has_photo,
                         documents
                  FROM recruitment`;
     const params = [];
@@ -39,6 +40,7 @@ router.get('/:id', verifyToken, requireAdmin, (req, res) => {
         `SELECT id, position_title, candidate_name, candidate_email, candidate_phone,
                 status, applied_date, notes, updated_at, cv_file_name, cv_mime_type,
                 (CASE WHEN cv_file_data IS NOT NULL THEN 1 ELSE 0 END) as has_cv,
+                (CASE WHEN photo_data IS NOT NULL THEN 1 ELSE 0 END) as has_photo,
                 documents
          FROM recruitment WHERE id = ?`,
         [req.params.id],
@@ -68,13 +70,16 @@ router.post('/', verifyToken, requireAdmin, (req, res) => {
     }
 
     const docsJson = Array.isArray(documents) ? JSON.stringify(documents) : null;
+    const { photo_data, photo_mime_type } = req.body;
 
     db.run(
         `INSERT INTO recruitment (position_title, candidate_name, candidate_email, candidate_phone,
-                                  notes, cv_file_name, cv_file_data, cv_mime_type, documents)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                  notes, cv_file_name, cv_file_data, cv_mime_type, documents,
+                                  photo_data, photo_mime_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [positionTitle, candidateName, candidateEmail, candidatePhone, notes,
-         cv_file_name || null, cv_file_data || null, cv_mime_type || null, docsJson],
+         cv_file_name || null, cv_file_data || null, cv_mime_type || null, docsJson,
+         photo_data || null, photo_mime_type || null],
         function(err) {
             if (err) return res.status(500).json({ error: 'Erro ao criar: ' + err.message });
             addAuditLog(req.user.id, 'CREATE', 'recruitment', this.lastID, `Candidato: ${candidateName}`);
@@ -86,7 +91,8 @@ router.post('/', verifyToken, requireAdmin, (req, res) => {
 // Atualizar
 router.put('/:id', verifyToken, requireAdmin, (req, res) => {
     const allowed = ['status', 'notes', 'position_title', 'candidate_name', 'candidate_email',
-                     'candidate_phone', 'cv_file_name', 'cv_file_data', 'cv_mime_type'];
+                     'candidate_phone', 'cv_file_name', 'cv_file_data', 'cv_mime_type',
+                     'photo_data', 'photo_mime_type'];
     const sets = [];
     const vals = [];
 
@@ -144,6 +150,39 @@ router.get('/:id/cv', verifyToken, requireAdmin, (req, res) => {
             res.setHeader('Content-Type', row.cv_mime_type || 'application/octet-stream');
             res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(row.cv_file_name || 'cv')}"`);
             res.send(buf);
+        }
+    );
+});
+
+// Download da foto (inline)
+router.get('/:id/photo', verifyToken, requireAdmin, (req, res) => {
+    db.get(
+        "SELECT photo_data, photo_mime_type FROM recruitment WHERE id = ?",
+        [req.params.id],
+        (err, row) => {
+            if (err) return res.status(500).json({ error: 'Erro' });
+            if (!row || !row.photo_data) return res.status(404).json({ error: 'Sem foto' });
+            const buf = Buffer.from(row.photo_data, 'base64');
+            res.setHeader('Content-Type', row.photo_mime_type || 'image/jpeg');
+            res.setHeader('Cache-Control', 'private, max-age=3600');
+            res.send(buf);
+        }
+    );
+});
+
+// Atualizar status rapidamente
+router.patch('/:id/status', verifyToken, requireAdmin, (req, res) => {
+    const { status } = req.body;
+    const valid = ['novo','triagem','entrevista','aprovado','rejeitado'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Status invalido' });
+    db.run(
+        "UPDATE recruitment SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [status, req.params.id],
+        function(err) {
+            if (err) return res.status(500).json({ error: 'Erro' });
+            if (this.changes === 0) return res.status(404).json({ error: 'Nao encontrado' });
+            addAuditLog(req.user.id, 'UPDATE', 'recruitment', req.params.id, `Status -> ${status}`);
+            res.json({ message: 'Atualizado', status });
         }
     );
 });

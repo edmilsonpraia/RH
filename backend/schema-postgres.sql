@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS employees (
     company TEXT,
     children INTEGER DEFAULT 0,
     academic_degree TEXT,
+    photo_data TEXT,
+    photo_mime_type TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -62,6 +64,8 @@ CREATE TABLE IF NOT EXISTS recruitment (
     cv_file_data TEXT,
     cv_mime_type TEXT,
     documents TEXT,
+    photo_data TEXT,
+    photo_mime_type TEXT,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -255,6 +259,8 @@ CREATE TABLE IF NOT EXISTS talent_pool (
     cv_file_data TEXT,
     cv_mime_type TEXT,
     documents TEXT,
+    photo_data TEXT,
+    photo_mime_type TEXT,
     skills TEXT,
     education TEXT,
     experience_years INTEGER,

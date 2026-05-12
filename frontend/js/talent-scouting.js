@@ -110,10 +110,6 @@ MODULES.talentScouting = {
             return;
         }
         const escape = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        const badge = st => {
-            const s = this.STATUS[st] || { label: st, color: '#666', bg: '#eee' };
-            return `<span class="badge" style="background:${s.bg}; color:${s.color};">${s.label}</span>`;
-        };
         const stars = (r) => r ? '★'.repeat(r) + '☆'.repeat(5 - r) : '-';
         const cvIcon = (t) => (t.cv_file_name)
             ? `<button class="btn-icon view" onclick="event.stopPropagation(); API.talentPool.openCv(${t.id}, '${escape(t.cv_file_name).replace(/'/g, "\\'")}')" title="Abrir CV"><i class="codicon codicon-file-text" style="color:var(--brand-600);"></i></button>`
@@ -121,19 +117,33 @@ MODULES.talentScouting = {
                 ? '<i class="codicon codicon-note" title="CV em texto" style="color:var(--ink-500);"></i>'
                 : '<i class="codicon codicon-file" style="color:var(--ink-300);" title="Sem CV"></i>');
 
+        const statusDropdown = (t) => {
+            const opts = Object.entries(this.STATUS).map(([k, v]) =>
+                `<option value="${k}" ${k === t.status ? 'selected' : ''}>${v.label}</option>`).join('');
+            return `<select class="ts-status-select" data-id="${t.id}" onchange="event.stopPropagation(); MODULES.talentScouting.quickStatus(${t.id}, this.value)" onclick="event.stopPropagation();" style="padding:4px 8px; border:1px solid var(--ink-300); border-radius:4px; font-size:12px; background:#fff; cursor:pointer;">${opts}</select>`;
+        };
+
+        const photoAvatar = (t) => {
+            if (t.has_photo) {
+                return `<div class="ts-avatar" data-id="${t.id}" style="width:36px;height:36px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;"><i class="codicon codicon-account" style="color:var(--ink-400);"></i></div>`;
+            }
+            const initial = (t.name || '?').charAt(0).toUpperCase();
+            return `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg, var(--brand-400), var(--brand-700));color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;">${initial}</div>`;
+        };
+
         const rows = this.items.map(t => `
-            <tr>
+            <tr style="cursor:pointer;" onclick="MODULES.talentScouting.showDetails(${t.id})">
+                <td style="width:50px;">${photoAvatar(t)}</td>
                 <td><strong>${escape(t.name)}</strong>${t.location ? `<div style="font-size:11px;color:var(--ink-500);">${escape(t.location)}</div>` : ''}</td>
                 <td>${escape(t.position_of_interest || '-')}</td>
                 <td>${escape(t.area || '-')}</td>
                 <td>${escape(t.source || '-')}</td>
                 <td>${t.experience_years ? `${t.experience_years} anos` : '-'}</td>
                 <td style="color:#f59e0b; font-size:14px;">${stars(t.rating)}</td>
-                <td style="text-align:center;">${cvIcon(t)}</td>
-                <td>${badge(t.status)}</td>
+                <td style="text-align:center;" onclick="event.stopPropagation();">${cvIcon(t)}</td>
+                <td onclick="event.stopPropagation();">${statusDropdown(t)}</td>
                 <td style="font-size:12px; color:var(--ink-500);">${t.created_at ? new Date(t.created_at).toLocaleDateString('pt-PT') : '-'}</td>
-                <td class="actions">
-                    <button class="btn-icon view" onclick="MODULES.talentScouting.showDetails(${t.id})" title="Ver"><i class="codicon codicon-eye"></i></button>
+                <td class="actions" onclick="event.stopPropagation();">
                     <button class="btn-icon edit" onclick="MODULES.talentScouting.showEditForm(${t.id})" title="Editar"><i class="codicon codicon-edit"></i></button>
                     ${t.status !== 'em_processo' ? `<button class="btn-icon" style="color:var(--brand-600);" onclick="MODULES.talentScouting.convert(${t.id}, '${escape(t.position_of_interest || '').replace(/'/g, '&#39;')}')" title="Converter em candidato"><i class="codicon codicon-arrow-right"></i></button>` : ''}
                     ${['arquivado','indisponivel'].includes(t.status) ? `<button class="btn-icon delete" onclick="MODULES.talentScouting.confirmDelete(${t.id}, '${escape(t.name).replace(/'/g, '&#39;')}')" title="Eliminar"><i class="codicon codicon-trash"></i></button>` : ''}
@@ -145,12 +155,21 @@ MODULES.talentScouting = {
             <div class="grid-container">
                 <table class="data-grid">
                     <thead>
-                        <tr><th>Nome</th><th>Função Interesse</th><th>Área</th><th>Fonte</th><th>Exp.</th><th>Rating</th><th>CV</th><th>Estado</th><th>Adicionado</th><th>Ações</th></tr>
+                        <tr><th>Foto</th><th>Nome</th><th>Função Interesse</th><th>Área</th><th>Fonte</th><th>Exp.</th><th>Rating</th><th>CV</th><th>Estado</th><th>Adicionado</th><th>Ações</th></tr>
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>
         `;
+
+        // Carregar fotos assincronamente (cada uma via fetch autenticado)
+        this.items.filter(t => t.has_photo).forEach(t => {
+            API.talentPool.loadPhotoUrl(t.id).then(url => {
+                if (!url) return;
+                const el = c.querySelector(`.ts-avatar[data-id="${t.id}"]`);
+                if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            });
+        });
     },
 
     showCreateForm() {
@@ -163,10 +182,17 @@ MODULES.talentScouting = {
     async showEditForm(id) {
         try {
             const t = await API.talentPool.getById(id);
+            t.has_photo = !!t.photo_data;
             UI.createModal(`Editar: ${t.name}`, this.getFormHTML(t), `
                 <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="MODULES.talentScouting.update(${id})">Atualizar</button>
             `);
+            // Carregar foto existente no preview
+            if (t.has_photo) {
+                const url = await API.talentPool.loadPhotoUrl(id);
+                const el = document.getElementById('tsPhotoPreview');
+                if (el && url) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            }
         } catch (e) {
             UI.showToast('Erro ao carregar', 'error');
         }
@@ -174,8 +200,20 @@ MODULES.talentScouting = {
 
     getFormHTML(d = {}) {
         const sel = (val, current) => val === current ? 'selected' : '';
+        const photoPreview = d.id && d.has_photo
+            ? `<div id="tsPhotoPreview" data-id="${d.id}" style="width:80px;height:80px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;"><i class="codicon codicon-loading codicon-modifier-spin"></i></div>`
+            : `<div id="tsPhotoPreview" style="width:80px;height:80px;border-radius:50%;background:var(--ink-100);display:inline-flex;align-items:center;justify-content:center;color:var(--ink-400);"><i class="codicon codicon-account" style="font-size:32px;"></i></div>`;
+
         return `
             <form id="tsForm">
+                <div style="display:flex; align-items:center; gap:14px; padding:14px; background:var(--ink-50); border-radius:8px; margin-bottom:14px;">
+                    ${photoPreview}
+                    <div style="flex:1;">
+                        <label class="form-label" style="margin-bottom:6px;">Fotografia <span style="font-size:11px; color:var(--ink-500);">— JPG/PNG, máx 3MB</span></label>
+                        <input type="file" class="form-control" id="tsPhotoFile" accept="image/*" onchange="MODULES.talentScouting._previewPhoto(event, 'tsPhotoPreview')">
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Nome *</label>
@@ -305,6 +343,19 @@ MODULES.talentScouting = {
         `;
     },
 
+    _previewPhoto(event, previewId) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 3 * 1024 * 1024) {
+            UI.showToast('Foto excede 3MB', 'error');
+            event.target.value = '';
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        const el = document.getElementById(previewId);
+        if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+    },
+
     _renderDocsList(d = {}) {
         let docs = [];
         try { docs = JSON.parse(d.documents || '[]'); } catch {}
@@ -375,6 +426,15 @@ MODULES.talentScouting = {
             if (docs.length) data.documents = JSON.stringify(docs);
         }
 
+        // Processar foto
+        const photoInput = document.getElementById('tsPhotoFile');
+        if (photoInput?.files?.[0]) {
+            const f = photoInput.files[0];
+            const obj = await API.fileToObject(f);
+            data.photo_data = obj.data;
+            data.photo_mime_type = obj.mime;
+        }
+
         return data;
     },
 
@@ -425,20 +485,31 @@ MODULES.talentScouting = {
             const tagsHtml = (t.tags || '').split(',').map(s => s.trim()).filter(Boolean)
                 .map(s => `<span class="badge badge-secondary" style="margin-right:4px;">${escape(s)}</span>`).join('');
 
+            const hasPhoto = !!t.photo_data;
+            const photoBlock = hasPhoto
+                ? `<div id="tsDetailsPhoto" data-id="${t.id}" style="width:120px;height:120px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="codicon codicon-loading codicon-modifier-spin"></i></div>`
+                : `<div style="width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg, var(--brand-400), var(--brand-700));color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:48px;font-weight:600;flex-shrink:0;">${escape((t.name || '?').charAt(0).toUpperCase())}</div>`;
+
             const content = `
+                <div style="display:flex; gap:20px; align-items:center; margin-bottom:18px; padding:14px; background:var(--ink-50); border-radius:8px;">
+                    ${photoBlock}
+                    <div style="flex:1;">
+                        <h2 style="margin:0; font-size:20px;">${escape(t.name)}</h2>
+                        <div style="color:var(--ink-600); margin-top:4px;">${fmt(t.position_of_interest)} · ${fmt(t.area)}</div>
+                        <div style="margin-top:8px;">
+                            <span class="badge" style="background:${sLabel.bg}; color:${sLabel.color};">${sLabel.label}</span>
+                            <span style="color:#f59e0b; margin-left:8px;">${stars(t.rating)}</span>
+                        </div>
+                    </div>
+                </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 20px; font-size:14px;">
-                    <div><strong>Nome:</strong> ${escape(t.name)}</div>
-                    <div><strong>Estado:</strong> <span class="badge" style="background:${sLabel.bg}; color:${sLabel.color};">${sLabel.label}</span></div>
                     <div><strong>Email:</strong> ${fmt(t.email)}</div>
                     <div><strong>Telefone:</strong> ${fmt(t.phone)}</div>
-                    <div><strong>Função interesse:</strong> ${fmt(t.position_of_interest)}</div>
-                    <div><strong>Área:</strong> ${fmt(t.area)}</div>
                     <div><strong>Localização:</strong> ${fmt(t.location)}</div>
                     <div><strong>Fonte:</strong> ${fmt(t.source)}</div>
                     <div><strong>Experiência:</strong> ${t.experience_years ? t.experience_years + ' anos' : '-'}</div>
                     <div><strong>Empregador atual:</strong> ${fmt(t.current_employer)}</div>
                     <div><strong>Pretensão salarial:</strong> ${t.expected_salary ? Number(t.expected_salary).toLocaleString('pt-PT') + ' Kz' : '-'}</div>
-                    <div><strong>Rating:</strong> <span style="color:#f59e0b;">${stars(t.rating)}</span></div>
                 </div>
                 <hr style="margin:14px 0;">
                 <div style="margin-bottom:10px;"><strong>Skills:</strong><br>${skillsHtml || '<em style="color:var(--ink-500);">não definidas</em>'}</div>
@@ -479,11 +550,32 @@ MODULES.talentScouting = {
             `;
             UI.createModal(t.name, content, `
                 <button class="btn btn-outline" onclick="UI.closeModal()">Fechar</button>
+                <button class="btn btn-secondary btn-sm" onclick="MODULES.talentScouting.showEditForm(${t.id})"><i class="codicon codicon-edit"></i> Editar</button>
                 <button class="btn btn-secondary btn-sm" onclick="MODULES.talentScouting.markContacted(${t.id})"><i class="codicon codicon-mail"></i> Marcar Contactado</button>
                 <button class="btn btn-primary btn-sm" onclick="MODULES.talentScouting.convert(${t.id}, '${escape(t.position_of_interest || '').replace(/'/g, '&#39;')}')"><i class="codicon codicon-arrow-right"></i> Converter em Candidato</button>
             `);
+
+            // Carregar foto no slot do header
+            if (hasPhoto) {
+                const url = await API.talentPool.loadPhotoUrl(t.id);
+                const el = document.getElementById('tsDetailsPhoto');
+                if (el && url) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            }
         } catch (e) {
             UI.showToast('Erro ao carregar', 'error');
+        }
+    },
+
+    async quickStatus(id, newStatus) {
+        try {
+            await API.talentPool.changeStatus(id, newStatus);
+            const item = this.items.find(t => t.id === id);
+            if (item) item.status = newStatus;
+            UI.showToast(`Estado atualizado: ${this.STATUS[newStatus]?.label || newStatus}`, 'success');
+            this.loadStats();
+        } catch (e) {
+            UI.showToast(e.message || 'Erro ao mudar estado', 'error');
+            this.loadData();
         }
     },
 
