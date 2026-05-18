@@ -67,6 +67,10 @@
                     <i class="codicon codicon-search"></i>
                     <span class="nav-item-label">Recrutamento</span>
                 </div>
+                <div class="nav-item" data-module="interviews" data-label="Entrevistas">
+                    <i class="codicon codicon-comment-discussion"></i>
+                    <span class="nav-item-label">Entrevistas</span>
+                </div>
                 <div class="nav-item" data-module="onboarding" data-label="Onboarding">
                     <i class="codicon codicon-rocket"></i>
                     <span class="nav-item-label">Onboarding</span>
@@ -238,6 +242,7 @@
                 <div id="auditModule" class="hidden"></div>
                 <div id="talentScoutingModule" class="hidden"></div>
                 <div id="evaluationsModule" class="hidden"></div>
+                <div id="interviewsModule" class="hidden"></div>
             </div>
         </main>
     </div>
@@ -260,7 +265,8 @@
             rsDashboard: {},
             audit: {},
             talentScouting: {},
-            evaluations: {}
+            evaluations: {},
+            interviews: {}
         };
     </script>
 
@@ -282,6 +288,7 @@
     <script src="js/audit.js"></script>
     <script src="js/talent-scouting.js"></script>
     <script src="js/evaluations.js"></script>
+    <script src="js/interviews.js"></script>
 
     <script>
         // Inicialização
@@ -401,7 +408,8 @@
                 'rsDashboard': 'Dashboard Recrutamento e Selecção',
                 'audit': 'Auditoria',
                 'talentScouting': 'Talent Scouting · Banco de Talentos',
-                'evaluations': 'Avaliações & Acompanhamento (9-Box)'
+                'evaluations': 'Avaliações & Acompanhamento (9-Box)',
+                'interviews': 'Entrevistas'
             };
             document.getElementById('pageTitle').textContent = titles[module] || module;
 

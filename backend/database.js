@@ -719,6 +719,16 @@ async function initializeDatabase() {
     try { await runAsync(`ALTER TABLE employees ADD COLUMN photo_data TEXT`); } catch (e) {}
     try { await runAsync(`ALTER TABLE employees ADD COLUMN photo_mime_type TEXT`); } catch (e) {}
 
+    // Migracoes em interviews (status workflow + testes)
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN status TEXT DEFAULT 'agendada'`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_template TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_answers TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_score INTEGER`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_total INTEGER`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_correct INTEGER`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN notes TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN candidate_name_snapshot TEXT`); } catch (e) {}
+
     console.log('✓ Tabelas verificadas/migradas');
     await createDefaultData();
     resolveDbReady();

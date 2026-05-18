@@ -371,6 +371,26 @@ const API = {
         }
     },
 
+    interviews: {
+        getAll(params = {}) {
+            const q = new URLSearchParams(params).toString();
+            return API.get(`/interviews${q ? '?' + q : ''}`);
+        },
+        getById(id) { return API.get(`/interviews/${id}`); },
+        create(data) { return API.post('/interviews', data); },
+        update(id, data) { return API.put(`/interviews/${id}`, data); },
+        delete(id) { return API.delete(`/interviews/${id}`); },
+        changeStatus(id, status) {
+            return API.request(`/interviews/${id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
+        },
+        submitTest(id, test_template, answers) {
+            return API.post(`/interviews/${id}/test`, { test_template, answers });
+        }
+    },
+
     evaluations: {
         getAll(params = {}) {
             const q = new URLSearchParams(params).toString();

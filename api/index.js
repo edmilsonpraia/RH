@@ -32,6 +32,7 @@ const rsDashboardRoutes = require('../backend/routes/rs-dashboard.routes');
 const auditRoutes = require('../backend/routes/audit.routes');
 const talentPoolRoutes = require('../backend/routes/talent-pool.routes');
 const evaluationsRoutes = require('../backend/routes/evaluations.routes');
+const interviewsRoutes = require('../backend/routes/interviews.routes');
 
 // Montar rotas
 app.use('/api/auth', authRoutes);
@@ -50,6 +51,7 @@ app.use('/api/rs-dashboard', rsDashboardRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/talent-pool', talentPoolRoutes);
 app.use('/api/evaluations', evaluationsRoutes);
+app.use('/api/interviews', interviewsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
