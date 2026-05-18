@@ -210,16 +210,27 @@ router.get('/:id/documents/:idx', verifyToken, requireAdmin, (req, res) => {
     });
 });
 
-// Eliminar (so arquivados ou indisponiveis - LGPD)
+// Eliminar talento (apenas admin) - acao auditada para conformidade LGPD
 router.delete('/:id', verifyToken, requireAdmin, (req, res) => {
-    db.run(
-        "DELETE FROM talent_pool WHERE id = ? AND status IN ('arquivado','indisponivel')",
+    // Capturar nome e status antes para registar no audit
+    db.get(
+        "SELECT name, status, consent_given FROM talent_pool WHERE id = ?",
         [req.params.id],
-        function(err) {
+        (err, row) => {
             if (err) return res.status(500).json({ error: 'Erro' });
-            if (this.changes === 0) return res.status(400).json({ error: 'Apenas talentos arquivados/indisponiveis podem ser eliminados (LGPD)' });
-            addAuditLog(req.user.id, 'DELETE', 'talent_pool', req.params.id, 'Talento eliminado');
-            res.json({ message: 'Eliminado' });
+            if (!row) return res.status(404).json({ error: 'Nao encontrado' });
+
+            db.run("DELETE FROM talent_pool WHERE id = ?", [req.params.id], function(err2) {
+                if (err2) return res.status(500).json({ error: 'Erro ao eliminar' });
+                addAuditLog(
+                    req.user.id,
+                    'DELETE',
+                    'talent_pool',
+                    req.params.id,
+                    `Talento "${row.name}" eliminado (status: ${row.status}, consentimento: ${row.consent_given ? 'sim' : 'nao'})`
+                );
+                res.json({ message: 'Eliminado' });
+            });
         }
     );
 });

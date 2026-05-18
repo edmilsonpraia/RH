@@ -146,7 +146,7 @@ MODULES.talentScouting = {
                 <td class="actions" onclick="event.stopPropagation();">
                     <button class="btn-icon edit" onclick="MODULES.talentScouting.showEditForm(${t.id})" title="Editar"><i class="codicon codicon-edit"></i></button>
                     ${t.status !== 'em_processo' ? `<button class="btn-icon" style="color:var(--brand-600);" onclick="MODULES.talentScouting.convert(${t.id}, '${escape(t.position_of_interest || '').replace(/'/g, '&#39;')}')" title="Converter em candidato"><i class="codicon codicon-arrow-right"></i></button>` : ''}
-                    ${['arquivado','indisponivel'].includes(t.status) ? `<button class="btn-icon delete" onclick="MODULES.talentScouting.confirmDelete(${t.id}, '${escape(t.name).replace(/'/g, '&#39;')}')" title="Eliminar"><i class="codicon codicon-trash"></i></button>` : ''}
+                    <button class="btn-icon delete" onclick="MODULES.talentScouting.confirmDelete(${t.id}, '${escape(t.name).replace(/'/g, '&#39;')}')" title="Eliminar"><i class="codicon codicon-trash"></i></button>
                 </td>
             </tr>
         `).join('');
@@ -621,10 +621,10 @@ MODULES.talentScouting = {
     },
 
     confirmDelete(id, name) {
-        UI.confirm(`Eliminar permanentemente "${name}"? (LGPD: só permitido para arquivados/indisponíveis)`, async () => {
+        UI.confirm(`Eliminar permanentemente o talento "${name}"?\n\nTodos os dados (incluindo CV, documentos e foto) serão removidos da base de dados. A ação é auditada (audit_logs) para conformidade LGPD.`, async () => {
             try {
                 await API.talentPool.delete(id);
-                UI.showToast('Eliminado', 'success');
+                UI.showToast('Talento eliminado', 'success');
                 this.loadData();
                 this.loadStats();
             } catch (e) {
