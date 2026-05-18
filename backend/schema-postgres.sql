@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS requisition_approvals (
 
 CREATE TABLE IF NOT EXISTS interviews (
     id SERIAL PRIMARY KEY,
-    candidate_id INTEGER NOT NULL,
+    candidate_id INTEGER,
     phase INTEGER NOT NULL CHECK(phase IN (1,2,3)),
     method TEXT,
     interviewer_id INTEGER,
