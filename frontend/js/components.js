@@ -88,9 +88,17 @@ const UI = {
             <button class="btn btn-danger" onclick="UI.confirmAction()">Confirmar</button>
         `;
 
-        this.createModal('Confirmação', `<p>${message}</p>`, footer);
+        // Escapar a mensagem e preservar quebras de linha
+        const escaped = String(message)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br>');
 
-        window.UI.confirmAction = () => {
+        this.createModal('Confirmação', `<p style="white-space:pre-line;">${escaped}</p>`, footer);
+
+        // Atribuir ao objecto UI directamente (UI e const, nao esta em window)
+        UI.confirmAction = () => {
             onConfirm();
             this.closeModal();
         };
