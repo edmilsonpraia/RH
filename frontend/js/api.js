@@ -153,6 +153,12 @@ const API = {
                 const blob = await r.blob();
                 return URL.createObjectURL(blob);
             } catch { return null; }
+        },
+        changeStatus(id, status) {
+            return API.request(`/employees/${id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
         }
     },
 

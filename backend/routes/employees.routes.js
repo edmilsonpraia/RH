@@ -3,6 +3,13 @@ const router = express.Router();
 const { db, addAuditLog } = require('../database');
 const { verifyToken, requireAdmin } = require('../auth');
 
+// Lista de colunas para listagem (exclui photo_data para nao explodir resposta)
+const LIST_COLUMNS = `id, meca, name, email, phone, position, department, salary, hire_date, status,
+    document_type, document_number, document_expiry, document_status, nationality, birth_date, gender,
+    contract_type, contract_duration_days, seniority, last_renewal_date, next_renewal_date,
+    contract_status, activity_type, site, company, children, academic_degree, created_at, updated_at,
+    (CASE WHEN photo_data IS NOT NULL THEN 1 ELSE 0 END) as has_photo`;
+
 // Listar todos os colaboradores (Admin) ou apenas o próprio (User)
 router.get('/', verifyToken, (req, res) => {
     if (req.user.role === 'admin') {
@@ -21,7 +28,7 @@ router.get('/', verifyToken, (req, res) => {
         const where = filters.join(' AND ');
 
         db.all(
-            `SELECT * FROM employees
+            `SELECT ${LIST_COLUMNS} FROM employees
              WHERE ${where}
              ORDER BY name ASC
              LIMIT ? OFFSET ?`,
@@ -47,7 +54,7 @@ router.get('/', verifyToken, (req, res) => {
     } else {
         // Usuário comum vê apenas seus próprios dados
         db.get(
-            "SELECT * FROM employees WHERE id = ?",
+            `SELECT ${LIST_COLUMNS} FROM employees WHERE id = ?`,
             [req.user.employeeId],
             (err, row) => {
                 if (err) {
@@ -68,7 +75,7 @@ router.get('/:id', verifyToken, (req, res) => {
         return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    db.get("SELECT * FROM employees WHERE id = ?", [id], (err, row) => {
+    db.get(`SELECT ${LIST_COLUMNS} FROM employees WHERE id = ?`, [id], (err, row) => {
         if (err) {
             return res.status(500).json({ error: 'Erro ao buscar colaborador' });
         }
@@ -197,6 +204,24 @@ router.delete('/:id', verifyToken, requireAdmin, (req, res) => {
             addAuditLog(req.user.id, 'DELETE', 'employees', id, 'Colaborador marcado como inativo');
 
             res.json({ message: 'Colaborador eliminado com sucesso' });
+        }
+    );
+});
+
+// Atualizar status rapidamente (inline)
+router.patch('/:id/status', verifyToken, requireAdmin, (req, res) => {
+    const { status } = req.body;
+    const valid = ['active', 'inactive', 'suspended'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Status invalido' });
+
+    db.run(
+        "UPDATE employees SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [status, req.params.id],
+        function(err) {
+            if (err) return res.status(500).json({ error: 'Erro' });
+            if (this.changes === 0) return res.status(404).json({ error: 'Nao encontrado' });
+            addAuditLog(req.user.id, 'UPDATE', 'employees', req.params.id, `Status -> ${status}`);
+            res.json({ message: 'Atualizado', status });
         }
     );
 });

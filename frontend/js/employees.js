@@ -156,6 +156,12 @@ MODULES.employees = {
         this.loadData();
     },
 
+    STATUS_LABELS: {
+        active:    { label: 'Activo',   color: '#10b981', bg: '#ecfdf5' },
+        inactive:  { label: 'Inactivo', color: '#dc2626', bg: '#fef2f2' },
+        suspended: { label: 'Suspenso', color: '#f59e0b', bg: '#fffbeb' }
+    },
+
     renderGrid() {
         const escape = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -181,70 +187,154 @@ MODULES.employees = {
             return `<span style="color:${color}; font-size:12px;">${escape(s)}</span>`;
         };
 
-        const columns = [
-            { key: 'meca', label: 'MECA', render: (row) => row.meca ? `<strong>${escape(row.meca)}</strong>` : '-' },
-            { key: 'name', label: 'Nome', sortable: true },
-            { key: 'position', label: 'Função' },
-            { key: 'department', label: 'Departamento' },
-            { key: 'site', label: 'Site', render: (row) => row.site || '-' },
-            { key: 'contract_type', label: 'Contrato', render: renderContractBadge },
-            { key: 'document_status', label: 'Doc.', render: renderDocStatus },
-            { key: 'phone', label: 'Contacto', render: (row) => row.phone || '-' },
-            {
-                key: 'actions',
-                label: 'Ações',
-                className: 'actions',
-                render: (row) => `
-                    <button class="btn-icon view" onclick="MODULES.employees.showDetails(${row.id})" title="Ver"><i class="codicon codicon-eye"></i></button>
-                    <button class="btn-icon edit" onclick="MODULES.employees.showEditForm(${row.id})" title="Editar"><i class="codicon codicon-edit"></i></button>
-                    <button class="btn-icon delete" onclick="MODULES.employees.confirmDelete(${row.id}, '${escape(row.name).replace(/'/g, '&#39;')}')" title="Eliminar"><i class="codicon codicon-trash"></i></button>
-                `
+        const photoAvatar = (row) => {
+            if (row.has_photo) {
+                return `<div class="emp-avatar" data-id="${row.id}" style="width:36px;height:36px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;"><i class="codicon codicon-account" style="color:var(--ink-400);"></i></div>`;
             }
-        ];
+            const initial = (row.name || '?').charAt(0).toUpperCase();
+            return `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg, var(--brand-400), var(--brand-700));color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;">${initial}</div>`;
+        };
 
-        UI.renderDataGrid(this.currentData, columns, 'employeesGrid', {});
+        const statusDropdown = (row) => {
+            const opts = Object.entries(this.STATUS_LABELS).map(([k, v]) =>
+                `<option value="${k}" ${k === row.status ? 'selected' : ''}>${v.label}</option>`).join('');
+            return `<select onchange="event.stopPropagation(); MODULES.employees.quickStatus(${row.id}, this.value)" onclick="event.stopPropagation();" style="padding:4px 8px; border:1px solid var(--ink-300); border-radius:4px; font-size:12px; background:#fff; cursor:pointer;">${opts}</select>`;
+        };
+
+        const rows = this.currentData.map(r => `
+            <tr style="cursor:pointer;" onclick="MODULES.employees.showDetails(${r.id})">
+                <td style="width:50px;">${photoAvatar(r)}</td>
+                <td>${r.meca ? `<strong>${escape(r.meca)}</strong>` : '-'}</td>
+                <td><strong>${escape(r.name)}</strong></td>
+                <td>${escape(r.position || '-')}</td>
+                <td>${escape(r.department || '-')}</td>
+                <td>${escape(r.site || '-')}</td>
+                <td>${renderContractBadge(r)}</td>
+                <td>${renderDocStatus(r)}</td>
+                <td>${escape(r.phone || '-')}</td>
+                <td onclick="event.stopPropagation();">${statusDropdown(r)}</td>
+                <td class="actions" onclick="event.stopPropagation();">
+                    <button class="btn-icon edit" onclick="MODULES.employees.showEditForm(${r.id})" title="Editar"><i class="codicon codicon-edit"></i></button>
+                    <button class="btn-icon delete" onclick="MODULES.employees.confirmDelete(${r.id}, '${escape(r.name).replace(/'/g, '&#39;')}')" title="Eliminar"><i class="codicon codicon-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+
+        const container = document.getElementById('employeesGrid');
+        container.innerHTML = `
+            <div class="grid-container">
+                <table class="data-grid">
+                    <thead>
+                        <tr>
+                            <th>Foto</th><th>MECA</th><th>Nome</th><th>Função</th><th>Departamento</th>
+                            <th>Site</th><th>Contrato</th><th>Doc.</th><th>Contacto</th><th>Estado</th><th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows || '<tr><td colspan="11" style="text-align:center; padding:30px; color:var(--ink-500);">Sem colaboradores.</td></tr>'}</tbody>
+                </table>
+            </div>
+        `;
+
+        // Carregar fotos async
+        this.currentData.filter(r => r.has_photo).forEach(r => {
+            API.employees.loadPhotoUrl(r.id).then(url => {
+                if (!url) return;
+                const el = container.querySelector(`.emp-avatar[data-id="${r.id}"]`);
+                if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            });
+        });
+    },
+
+    async quickStatus(id, newStatus) {
+        try {
+            await API.employees.changeStatus(id, newStatus);
+            const item = this.currentData.find(e => e.id === id);
+            if (item) item.status = newStatus;
+            UI.showToast(`Estado: ${this.STATUS_LABELS[newStatus]?.label || newStatus}`, 'success');
+        } catch (e) {
+            UI.showToast(e.message || 'Erro ao mudar estado', 'error');
+            this.loadData();
+        }
     },
 
     async showDetails(id) {
         try {
             const e = await API.employees.getById(id);
+            const escape = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
             const fmt = (v) => v ? v : '-';
             const fmtDate = (v) => v ? new Date(v).toLocaleDateString('pt-PT') : '-';
+            const sLabel = this.STATUS_LABELS[e.status] || { label: e.status, color: '#666', bg: '#eee' };
+            const hasPhoto = !!e.has_photo;
+
+            const photoBlock = hasPhoto
+                ? `<div id="empDetailsPhoto" data-id="${e.id}" style="width:120px;height:120px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="codicon codicon-loading codicon-modifier-spin"></i></div>`
+                : `<div style="width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg, var(--brand-400), var(--brand-700));color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:48px;font-weight:600;flex-shrink:0;">${escape((e.name || '?').charAt(0).toUpperCase())}</div>`;
+
             const content = `
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; font-size:14px;">
-                    <div><strong>MECA:</strong> ${fmt(e.meca)}</div>
-                    <div><strong>Nome:</strong> ${fmt(e.name)}</div>
-                    <div><strong>Email:</strong> ${fmt(e.email)}</div>
-                    <div><strong>Contacto:</strong> ${fmt(e.phone)}</div>
-                    <div><strong>Nacionalidade:</strong> ${fmt(e.nationality)}</div>
-                    <div><strong>Género:</strong> ${fmt(e.gender)}</div>
+                <div style="display:flex; gap:20px; align-items:center; margin-bottom:18px; padding:14px; background:var(--ink-50); border-radius:8px;">
+                    ${photoBlock}
+                    <div style="flex:1;">
+                        <h2 style="margin:0; font-size:20px;">${escape(e.name)}</h2>
+                        <div style="color:var(--ink-600); margin-top:4px;">${escape(fmt(e.position))} · ${escape(fmt(e.department))}</div>
+                        <div style="margin-top:8px;">
+                            <span class="badge" style="background:${sLabel.bg}; color:${sLabel.color};">${sLabel.label}</span>
+                            ${e.meca ? `<span style="margin-left:10px; color:var(--ink-500); font-size:13px;">MECA <strong>${escape(e.meca)}</strong></span>` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <h4 style="font-size:13px; color:var(--ink-500); margin:14px 0 8px; text-transform:uppercase; letter-spacing:0.5px;">Dados Pessoais</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size:14px;">
+                    <div><strong>Email:</strong> ${escape(fmt(e.email))}</div>
+                    <div><strong>Contacto:</strong> ${escape(fmt(e.phone))}</div>
+                    <div><strong>Nacionalidade:</strong> ${escape(fmt(e.nationality))}</div>
+                    <div><strong>Género:</strong> ${escape(fmt(e.gender))}</div>
                     <div><strong>Data nascimento:</strong> ${fmtDate(e.birth_date)}</div>
                     <div><strong>Filhos:</strong> ${fmt(e.children)}</div>
-                    <div style="grid-column: span 2;"><hr></div>
-                    <div><strong>Tipo doc:</strong> ${fmt(e.document_type)}</div>
-                    <div><strong>Nº doc:</strong> ${fmt(e.document_number)}</div>
+                </div>
+
+                <h4 style="font-size:13px; color:var(--ink-500); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.5px;">Documento</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size:14px;">
+                    <div><strong>Tipo:</strong> ${escape(fmt(e.document_type))}</div>
+                    <div><strong>Número:</strong> ${escape(fmt(e.document_number))}</div>
                     <div><strong>Caducidade:</strong> ${fmtDate(e.document_expiry)}</div>
-                    <div><strong>Estado doc:</strong> ${fmt(e.document_status)}</div>
-                    <div style="grid-column: span 2;"><hr></div>
-                    <div><strong>Departamento:</strong> ${fmt(e.department)}</div>
-                    <div><strong>Função:</strong> ${fmt(e.position)}</div>
-                    <div><strong>Site:</strong> ${fmt(e.site)}</div>
-                    <div><strong>Empresa:</strong> ${fmt(e.company)}</div>
-                    <div><strong>Tipo actividade:</strong> ${fmt(e.activity_type)}</div>
-                    <div><strong>Grau académico:</strong> ${fmt(e.academic_degree)}</div>
-                    <div style="grid-column: span 2;"><hr></div>
-                    <div><strong>Tipo contrato:</strong> ${fmt(e.contract_type)}</div>
+                    <div><strong>Estado:</strong> ${escape(fmt(e.document_status))}</div>
+                </div>
+
+                <h4 style="font-size:13px; color:var(--ink-500); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.5px;">Função e Local</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size:14px;">
+                    <div><strong>Função:</strong> ${escape(fmt(e.position))}</div>
+                    <div><strong>Departamento:</strong> ${escape(fmt(e.department))}</div>
+                    <div><strong>Site:</strong> ${escape(fmt(e.site))}</div>
+                    <div><strong>Empresa:</strong> ${escape(fmt(e.company))}</div>
+                    <div><strong>Tipo actividade:</strong> ${escape(fmt(e.activity_type))}</div>
+                    <div><strong>Grau académico:</strong> ${escape(fmt(e.academic_degree))}</div>
+                </div>
+
+                <h4 style="font-size:13px; color:var(--ink-500); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.5px;">Contrato</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; font-size:14px;">
+                    <div><strong>Tipo:</strong> ${escape(fmt(e.contract_type))}</div>
                     <div><strong>Duração (dias):</strong> ${fmt(e.contract_duration_days)}</div>
-                    <div><strong>Antiguidade:</strong> ${fmt(e.seniority)}</div>
-                    <div><strong>Estado contrato:</strong> ${fmt(e.contract_status)}</div>
                     <div><strong>Admissão:</strong> ${fmtDate(e.hire_date)}</div>
+                    <div><strong>Antiguidade:</strong> ${escape(fmt(e.seniority))}</div>
                     <div><strong>Última renovação:</strong> ${fmtDate(e.last_renewal_date)}</div>
                     <div><strong>Próxima renovação:</strong> ${fmtDate(e.next_renewal_date)}</div>
+                    <div><strong>Estado contrato:</strong> ${escape(fmt(e.contract_status))}</div>
                     <div><strong>Salário:</strong> ${UI.formatCurrency(e.salary || 0)}</div>
                 </div>
             `;
-            const footer = `<button class="btn btn-outline" onclick="UI.closeModal()">Fechar</button>`;
-            UI.createModal(`${e.name} - Detalhes`, content, footer);
+            const footer = `
+                <button class="btn btn-outline" onclick="UI.closeModal()">Fechar</button>
+                <button class="btn btn-primary btn-sm" onclick="MODULES.employees.showEditForm(${e.id})"><i class="codicon codicon-edit"></i> Editar</button>
+            `;
+            UI.createModal(`Detalhes do Colaborador`, content, footer);
+
+            // Carregar foto no slot
+            if (hasPhoto) {
+                const url = await API.employees.loadPhotoUrl(e.id);
+                const el = document.getElementById('empDetailsPhoto');
+                if (el && url) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            }
         } catch (err) {
             UI.showToast('Erro ao carregar detalhes', 'error');
         }
@@ -268,9 +358,29 @@ MODULES.employees = {
                 <button class="btn btn-primary" onclick="MODULES.employees.submitEdit(${id})">Atualizar</button>
             `;
             UI.createModal('Editar Colaborador', content, footer);
+
+            // Carregar foto existente no preview
+            if (employee.has_photo) {
+                const url = await API.employees.loadPhotoUrl(id);
+                const el = document.getElementById('empPhotoPreview');
+                if (el && url) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
+            }
         } catch (error) {
             UI.showToast('Erro ao carregar colaborador', 'error');
         }
+    },
+
+    _previewPhoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 3 * 1024 * 1024) {
+            UI.showToast('Foto excede 3MB', 'error');
+            event.target.value = '';
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        const el = document.getElementById('empPhotoPreview');
+        if (el) el.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`;
     },
 
     getFormHTML(data = {}) {
@@ -279,8 +389,20 @@ MODULES.employees = {
         const deptOptions = ['Administrativo','Engenharia','HST','Transportes','Topografia','Civil','Capital Humano','QHSE','Lisandra Eventos','Departamento Técnico','Geologia','Informática','Comercial','Conselho de Administração','Comunicação e Marketing','Contabilidade e Finanças','Gabinete Jurídico','Departamento Médico', ...departments];
         const uniqueDepts = [...new Set(deptOptions)].sort();
 
+        const photoPreview = data.id && data.has_photo
+            ? `<div id="empPhotoPreview" data-id="${data.id}" style="width:80px;height:80px;border-radius:50%;background:var(--ink-200);overflow:hidden;display:inline-flex;align-items:center;justify-content:center;"><i class="codicon codicon-loading codicon-modifier-spin"></i></div>`
+            : `<div id="empPhotoPreview" style="width:80px;height:80px;border-radius:50%;background:var(--ink-100);display:inline-flex;align-items:center;justify-content:center;color:var(--ink-400);"><i class="codicon codicon-account" style="font-size:32px;"></i></div>`;
+
         return `
             <form id="employeeForm">
+                <div style="display:flex; align-items:center; gap:14px; padding:14px; background:var(--ink-50); border-radius:8px; margin-bottom:14px;">
+                    ${photoPreview}
+                    <div style="flex:1;">
+                        <label class="form-label" style="margin-bottom:6px;">Fotografia <span style="font-size:11px; color:var(--ink-500);">— JPG/PNG, máx 3MB</span></label>
+                        <input type="file" class="form-control" id="empPhotoFile" accept="image/*" onchange="MODULES.employees._previewPhoto(event)">
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">MECA</label>
@@ -415,7 +537,7 @@ MODULES.employees = {
     },
 
     async submitCreate() {
-        const formData = this.getFormData();
+        const formData = await this.getFormData();
         if (!formData) return;
 
         try {
@@ -432,7 +554,7 @@ MODULES.employees = {
     },
 
     async submitEdit(id) {
-        const formData = this.getFormData();
+        const formData = await this.getFormData();
         if (!formData) return;
 
         try {
@@ -448,7 +570,7 @@ MODULES.employees = {
         }
     },
 
-    getFormData() {
+    async getFormData() {
         const v = (id) => document.getElementById(id)?.value || '';
         const data = {
             meca: v('empMeca'),
@@ -476,6 +598,15 @@ MODULES.employees = {
         if (!data.name || !data.email || !data.position || !data.department || !data.hireDate) {
             UI.showToast('Por favor, preencha os campos obrigatórios (Nome, Email, Função, Departamento, Admissão)', 'error');
             return null;
+        }
+
+        // Processar foto
+        const photoInput = document.getElementById('empPhotoFile');
+        if (photoInput?.files?.[0]) {
+            const f = photoInput.files[0];
+            const obj = await API.fileToObject(f);
+            data.photo_data = obj.data;
+            data.photo_mime_type = obj.mime;
         }
 
         return data;
