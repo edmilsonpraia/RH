@@ -391,6 +391,34 @@ const API = {
         },
         generateTestLink(id, test_template) {
             return API.post(`/interviews/${id}/generate-test-link`, { test_template });
+        },
+        // Para o utilizador autenticado
+        myPending() {
+            return API.get('/interviews/my/pending');
+        },
+        getMyTest(interviewId) {
+            return API.get(`/interviews/my/${interviewId}`);
+        },
+        submitMyTest(interviewId, answers) {
+            return API.post(`/interviews/my/${interviewId}/submit`, { answers });
+        }
+    },
+
+    testTemplates: {
+        getAll() {
+            return API.get('/test-templates');
+        },
+        getById(id) {
+            return API.get(`/test-templates/${id}`);
+        },
+        create(data) {
+            return API.post('/test-templates', data);
+        },
+        update(id, data) {
+            return API.put(`/test-templates/${id}`, data);
+        },
+        delete(id) {
+            return API.delete(`/test-templates/${id}`);
         }
     },
 

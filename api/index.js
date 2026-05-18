@@ -33,6 +33,7 @@ const auditRoutes = require('../backend/routes/audit.routes');
 const talentPoolRoutes = require('../backend/routes/talent-pool.routes');
 const evaluationsRoutes = require('../backend/routes/evaluations.routes');
 const interviewsRoutes = require('../backend/routes/interviews.routes');
+const testTemplatesRoutes = require('../backend/routes/test-templates.routes');
 
 // Montar rotas
 app.use('/api/auth', authRoutes);
@@ -52,6 +53,7 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/talent-pool', talentPoolRoutes);
 app.use('/api/evaluations', evaluationsRoutes);
 app.use('/api/interviews', interviewsRoutes);
+app.use('/api/test-templates', testTemplatesRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

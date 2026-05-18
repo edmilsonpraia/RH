@@ -6,7 +6,45 @@ const { verifyToken, requireAdmin } = require('../auth');
 
 const VALID_STATUS = ['agendada', 'em_andamento', 'concluida', 'cancelada'];
 
-// === DEFINICAO COMPLETA DOS TESTES (server-side) ===
+// Helper: parse JSONB (Supabase) ou TEXT (SQLite) de questions
+function parseQuestions(v) {
+    if (v == null) return [];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') {
+        try { return JSON.parse(v); } catch { return []; }
+    }
+    if (typeof v === 'object') return v;
+    return [];
+}
+
+// Helper: carrega template da BD por code
+function loadTemplateFromDb(code) {
+    return new Promise((resolve) => {
+        db.get(
+            'SELECT code, title, description, type, questions FROM test_templates WHERE code = ? AND (is_active = 1 OR is_active = TRUE)',
+            [code],
+            (err, row) => {
+                if (err || !row) return resolve(null);
+                resolve({
+                    title: row.title,
+                    description: row.description || '',
+                    type: row.type,
+                    questions: parseQuestions(row.questions)
+                });
+            }
+        );
+    });
+}
+
+// Devolve template pelo code (DB ou fallback hardcoded)
+async function getTest(code) {
+    const fromDb = await loadTemplateFromDb(code);
+    if (fromDb) return fromDb;
+    return TESTS[code] || null;
+}
+
+// === DEFINICAO COMPLETA DOS TESTES (FALLBACK hardcoded) ===
+// Usado quando a tabela test_templates ainda nao tem o template (ou em modo memoria).
 // Estrutura unificada: questions[i] = { q, correct, options? }
 const TESTS = {
     admin_ch: {
@@ -86,8 +124,8 @@ const TESTS = {
 };
 
 // Vista publica do teste (sem respostas corretas)
-function getPublicTest(template) {
-    const t = TESTS[template];
+async function getPublicTest(template) {
+    const t = await getTest(template);
     if (!t) return null;
     return {
         title: t.title,
@@ -100,8 +138,8 @@ function getPublicTest(template) {
     };
 }
 
-function calculateScore(template, answers) {
-    const t = TESTS[template];
+async function calculateScore(template, answers) {
+    const t = await getTest(template);
     if (!t) return null;
     const total = t.questions.length;
     let correct = 0;
@@ -229,12 +267,14 @@ router.patch('/:id(\\d+)/status', verifyToken, requireAdmin, (req, res) => {
 });
 
 // Aplicacao manual de teste pelo admin (mantida para compatibilidade)
-router.post('/:id(\\d+)/test', verifyToken, requireAdmin, (req, res) => {
+router.post('/:id(\\d+)/test', verifyToken, requireAdmin, async (req, res) => {
     const { test_template, answers } = req.body;
-    if (!test_template || !TESTS[test_template]) return res.status(400).json({ error: 'Template invalido' });
+    if (!test_template) return res.status(400).json({ error: 'Template invalido' });
     if (!Array.isArray(answers)) return res.status(400).json({ error: 'answers deve ser array' });
 
-    const result = calculateScore(test_template, answers);
+    const result = await calculateScore(test_template, answers);
+    if (!result) return res.status(400).json({ error: 'Template "' + test_template + '" não encontrado' });
+
     db.run(
         `UPDATE interviews
          SET test_template = ?, test_answers = ?, test_score = ?,
@@ -255,11 +295,14 @@ router.post('/:id(\\d+)/test', verifyToken, requireAdmin, (req, res) => {
 });
 
 // === GERAR LINK DE TESTE para envio ao candidato ===
-router.post('/:id(\\d+)/generate-test-link', verifyToken, requireAdmin, (req, res) => {
+router.post('/:id(\\d+)/generate-test-link', verifyToken, requireAdmin, async (req, res) => {
     const { test_template } = req.body;
-    if (!test_template || !TESTS[test_template]) {
-        return res.status(400).json({ error: 'test_template obrigatorio (admin_ch | ti)' });
+    if (!test_template) {
+        return res.status(400).json({ error: 'test_template obrigatorio' });
     }
+    // Validar que o template existe
+    const tpl = await getTest(test_template);
+    if (!tpl) return res.status(400).json({ error: 'Template "' + test_template + '" não encontrado na BD' });
 
     // Gerar token unico
     const token = crypto.randomBytes(16).toString('hex');
@@ -311,14 +354,14 @@ router.get('/test/:token', (req, res) => {
          LEFT JOIN recruitment r ON i.candidate_id = r.id
          WHERE i.test_access_token = ?`,
         [token],
-        (err, row) => {
+        async (err, row) => {
             if (err) return res.status(500).json({ error: 'Erro no servidor' });
             if (!row) return res.status(404).json({ error: 'Link inválido ou expirado' });
             if (row.test_submitted_at) {
                 return res.status(410).json({ error: 'Este teste já foi submetido', alreadySubmitted: true });
             }
 
-            const publicTest = getPublicTest(row.test_template);
+            const publicTest = await getPublicTest(row.test_template);
             if (!publicTest) return res.status(500).json({ error: 'Template do teste não encontrado' });
 
             // Marcar inicio (se ainda nao iniciado)
@@ -350,17 +393,18 @@ router.post('/test/:token/submit', (req, res) => {
         `SELECT id, test_template, test_submitted_at
          FROM interviews WHERE test_access_token = ?`,
         [token],
-        (err, row) => {
+        async (err, row) => {
             if (err) return res.status(500).json({ error: 'Erro' });
             if (!row) return res.status(404).json({ error: 'Link inválido' });
             if (row.test_submitted_at) {
                 return res.status(410).json({ error: 'Este teste já foi submetido' });
             }
-            if (!row.test_template || !TESTS[row.test_template]) {
+            if (!row.test_template) {
                 return res.status(500).json({ error: 'Template do teste não configurado' });
             }
 
-            const result = calculateScore(row.test_template, answers);
+            const result = await calculateScore(row.test_template, answers);
+            if (!result) return res.status(500).json({ error: 'Template não encontrado' });
 
             db.run(
                 `UPDATE interviews
@@ -374,6 +418,162 @@ router.post('/test/:token/submit', (req, res) => {
                     if (err2) return res.status(500).json({ error: 'Erro ao guardar' });
                     addAuditLog(null, 'TEST_SUBMITTED', 'interviews', row.id,
                         `Teste auto-submetido (token): ${result.correct}/${result.total} (${result.score}%)`);
+                    res.json({
+                        message: 'Teste submetido com sucesso',
+                        score: result.score,
+                        correct: result.correct,
+                        total: result.total
+                    });
+                }
+            );
+        }
+    );
+});
+
+// ========================================
+// ENDPOINTS PARA UTILIZADORES AUTENTICADOS (Os Meus Testes)
+// ========================================
+
+// GET /api/interviews/my/pending - lista testes pendentes para o user atual (match por email)
+router.get('/my/pending', verifyToken, (req, res) => {
+    const userEmail = (req.user.username || '').toLowerCase();
+    const empId = req.user.employeeId;
+
+    db.all(
+        `SELECT i.id, i.test_template, i.test_started_at, i.scheduled_at,
+                i.candidate_name_snapshot, r.candidate_name, r.candidate_email,
+                r.position_title, e.email as employee_email
+         FROM interviews i
+         LEFT JOIN recruitment r ON i.candidate_id = r.id
+         LEFT JOIN employees e ON e.id = ?
+         WHERE i.test_template IS NOT NULL
+           AND i.test_submitted_at IS NULL
+           AND (
+                LOWER(COALESCE(r.candidate_email, '')) = ?
+                OR LOWER(COALESCE(e.email, '')) = ?
+           )
+         ORDER BY i.created_at DESC`,
+        [empId || 0, userEmail, userEmail],
+        async (err, rows) => {
+            if (err) return res.status(500).json({ error: 'Erro: ' + err.message });
+            // Enriquecer com info do template (sem respostas)
+            const out = [];
+            for (const r of (rows || [])) {
+                const tpl = await getTest(r.test_template);
+                out.push({
+                    interview_id: r.id,
+                    candidate_name: r.candidate_name || r.candidate_name_snapshot,
+                    position_title: r.position_title,
+                    scheduled_at: r.scheduled_at,
+                    test_started_at: r.test_started_at,
+                    test_template: r.test_template,
+                    test_title: tpl ? tpl.title : r.test_template,
+                    test_description: tpl ? tpl.description : null,
+                    test_type: tpl ? tpl.type : null,
+                    questions_count: tpl ? tpl.questions.length : 0
+                });
+            }
+            res.json(out);
+        }
+    );
+});
+
+// GET /api/interviews/my/:id - obter teste para o user fazer (sem respostas certas)
+router.get('/my/:id(\\d+)', verifyToken, async (req, res) => {
+    const userEmail = (req.user.username || '').toLowerCase();
+    const empId = req.user.employeeId;
+
+    db.get(
+        `SELECT i.id, i.test_template, i.test_submitted_at, i.candidate_name_snapshot,
+                r.candidate_name, r.candidate_email, r.position_title,
+                e.email as employee_email
+         FROM interviews i
+         LEFT JOIN recruitment r ON i.candidate_id = r.id
+         LEFT JOIN employees e ON e.id = ?
+         WHERE i.id = ?`,
+        [empId || 0, req.params.id],
+        async (err, row) => {
+            if (err) return res.status(500).json({ error: 'Erro' });
+            if (!row) return res.status(404).json({ error: 'Não encontrada' });
+
+            const candEmail = (row.candidate_email || '').toLowerCase();
+            const empEmail = (row.employee_email || '').toLowerCase();
+            if (candEmail !== userEmail && empEmail !== userEmail) {
+                return res.status(403).json({ error: 'Acesso negado' });
+            }
+            if (row.test_submitted_at) {
+                return res.status(410).json({ error: 'Teste já submetido', alreadySubmitted: true });
+            }
+            if (!row.test_template) {
+                return res.status(400).json({ error: 'Nenhum teste atribuído a esta entrevista' });
+            }
+
+            const publicTest = await getPublicTest(row.test_template);
+            if (!publicTest) return res.status(500).json({ error: 'Template não encontrado' });
+
+            // Marcar inicio
+            db.run(
+                `UPDATE interviews SET test_started_at = COALESCE(test_started_at, CURRENT_TIMESTAMP),
+                                       status = CASE WHEN status = 'agendada' THEN 'em_andamento' ELSE status END
+                 WHERE id = ? AND test_started_at IS NULL`,
+                [row.id]
+            );
+
+            res.json({
+                candidateName: row.candidate_name || row.candidate_name_snapshot || 'Candidato',
+                positionTitle: row.position_title || null,
+                test: publicTest
+            });
+        }
+    );
+});
+
+// POST /api/interviews/my/:id/submit - submeter respostas pelo user autenticado
+router.post('/my/:id(\\d+)/submit', verifyToken, async (req, res) => {
+    const { answers } = req.body;
+    if (!Array.isArray(answers)) return res.status(400).json({ error: 'answers obrigatorio' });
+
+    const userEmail = (req.user.username || '').toLowerCase();
+    const empId = req.user.employeeId;
+
+    db.get(
+        `SELECT i.id, i.test_template, i.test_submitted_at,
+                r.candidate_email, e.email as employee_email
+         FROM interviews i
+         LEFT JOIN recruitment r ON i.candidate_id = r.id
+         LEFT JOIN employees e ON e.id = ?
+         WHERE i.id = ?`,
+        [empId || 0, req.params.id],
+        async (err, row) => {
+            if (err) return res.status(500).json({ error: 'Erro' });
+            if (!row) return res.status(404).json({ error: 'Não encontrada' });
+
+            const candEmail = (row.candidate_email || '').toLowerCase();
+            const empEmail = (row.employee_email || '').toLowerCase();
+            if (candEmail !== userEmail && empEmail !== userEmail) {
+                return res.status(403).json({ error: 'Acesso negado' });
+            }
+            if (row.test_submitted_at) {
+                return res.status(410).json({ error: 'Teste já submetido' });
+            }
+            if (!row.test_template) {
+                return res.status(400).json({ error: 'Nenhum teste atribuído' });
+            }
+
+            const result = await calculateScore(row.test_template, answers);
+            if (!result) return res.status(500).json({ error: 'Template não encontrado' });
+
+            db.run(
+                `UPDATE interviews
+                 SET test_answers = ?, test_score = ?, test_total = ?, test_correct = ?,
+                     test_submitted_at = CURRENT_TIMESTAMP, status = 'concluida',
+                     completed_at = CURRENT_TIMESTAMP
+                 WHERE id = ?`,
+                [JSON.stringify(answers), result.score, result.total, result.correct, row.id],
+                function(err2) {
+                    if (err2) return res.status(500).json({ error: 'Erro ao guardar' });
+                    addAuditLog(req.user.id, 'TEST_SUBMITTED', 'interviews', row.id,
+                        `Auto-submetido pelo user ${userEmail}: ${result.correct}/${result.total} (${result.score}%)`);
                     res.json({
                         message: 'Teste submetido com sucesso',
                         score: result.score,

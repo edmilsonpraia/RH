@@ -71,6 +71,10 @@
                     <i class="codicon codicon-comment-discussion"></i>
                     <span class="nav-item-label">Entrevistas</span>
                 </div>
+                <div class="nav-item" data-module="testTemplates" data-label="Banco de Testes">
+                    <i class="codicon codicon-checklist"></i>
+                    <span class="nav-item-label">Banco de Testes</span>
+                </div>
                 <div class="nav-item" data-module="onboarding" data-label="Onboarding">
                     <i class="codicon codicon-rocket"></i>
                     <span class="nav-item-label">Onboarding</span>
@@ -243,6 +247,7 @@
                 <div id="talentScoutingModule" class="hidden"></div>
                 <div id="evaluationsModule" class="hidden"></div>
                 <div id="interviewsModule" class="hidden"></div>
+                <div id="testTemplatesModule" class="hidden"></div>
             </div>
         </main>
     </div>
@@ -266,7 +271,8 @@
             audit: {},
             talentScouting: {},
             evaluations: {},
-            interviews: {}
+            interviews: {},
+            testTemplates: {}
         };
     </script>
 
@@ -289,6 +295,7 @@
     <script src="js/talent-scouting.js"></script>
     <script src="js/evaluations.js"></script>
     <script src="js/interviews.js"></script>
+    <script src="js/test-templates.js"></script>
 
     <script>
         // Inicialização
@@ -409,7 +416,8 @@
                 'audit': 'Auditoria',
                 'talentScouting': 'Talent Scouting · Banco de Talentos',
                 'evaluations': 'Avaliações & Acompanhamento (9-Box)',
-                'interviews': 'Entrevistas'
+                'interviews': 'Entrevistas',
+                'testTemplates': 'Banco de Testes'
             };
             document.getElementById('pageTitle').textContent = titles[module] || module;
 

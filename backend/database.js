@@ -633,6 +633,21 @@ async function initializeDatabase() {
             archived_at DATETIME
         )`,
 
+        // === Test Templates ===
+        `CREATE TABLE IF NOT EXISTS test_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            type TEXT NOT NULL CHECK(type IN ('vf','mc')),
+            questions TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            is_builtin INTEGER DEFAULT 0,
+            created_by INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // === Avaliacoes e Acompanhamento (extensao do desempenho) ===
         `CREATE TABLE IF NOT EXISTS employee_evaluations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
