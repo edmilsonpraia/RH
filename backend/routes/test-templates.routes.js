@@ -20,7 +20,7 @@ router.get('/', verifyToken, requireAdmin, (req, res) => {
         `SELECT id, code, title, description, type, questions, is_active, is_builtin,
                 created_by, created_at, updated_at
          FROM test_templates
-         WHERE is_active = 1 OR is_active = TRUE
+         WHERE is_active = TRUE
          ORDER BY is_builtin DESC, title ASC`,
         [],
         (err, rows) => {
@@ -87,7 +87,7 @@ router.post('/', verifyToken, requireAdmin, (req, res) => {
 
     db.run(
         `INSERT INTO test_templates (code, title, description, type, questions, is_active, is_builtin, created_by)
-         VALUES (?, ?, ?, ?, ?, 1, 0, ?)`,
+         VALUES (?, ?, ?, ?, ?, TRUE, FALSE, ?)`,
         [finalCode, title, description || null, type, JSON.stringify(questions), req.user.id],
         function(err) {
             if (err) {
@@ -117,7 +117,7 @@ router.put('/:id(\\d+)', verifyToken, requireAdmin, (req, res) => {
 
         if (title !== undefined) { sets.push('title = ?'); vals.push(title); }
         if (description !== undefined) { sets.push('description = ?'); vals.push(description); }
-        if (is_active !== undefined) { sets.push('is_active = ?'); vals.push(is_active ? 1 : 0); }
+        if (is_active !== undefined) { sets.push('is_active = ?'); vals.push(is_active ? true : false); }
 
         // So permite alterar tipo/questions se nao for builtin
         if (!row.is_builtin) {

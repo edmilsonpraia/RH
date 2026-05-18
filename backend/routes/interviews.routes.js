@@ -21,7 +21,7 @@ function parseQuestions(v) {
 function loadTemplateFromDb(code) {
     return new Promise((resolve) => {
         db.get(
-            'SELECT code, title, description, type, questions FROM test_templates WHERE code = ? AND (is_active = 1 OR is_active = TRUE)',
+            'SELECT code, title, description, type, questions FROM test_templates WHERE code = ? AND is_active = TRUE',
             [code],
             (err, row) => {
                 if (err || !row) return resolve(null);
