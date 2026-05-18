@@ -728,6 +728,9 @@ async function initializeDatabase() {
     try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_correct INTEGER`); } catch (e) {}
     try { await runAsync(`ALTER TABLE interviews ADD COLUMN notes TEXT`); } catch (e) {}
     try { await runAsync(`ALTER TABLE interviews ADD COLUMN candidate_name_snapshot TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_access_token TEXT`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_started_at DATETIME`); } catch (e) {}
+    try { await runAsync(`ALTER TABLE interviews ADD COLUMN test_submitted_at DATETIME`); } catch (e) {}
 
     console.log('✓ Tabelas verificadas/migradas');
     await createDefaultData();

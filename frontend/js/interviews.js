@@ -158,12 +158,27 @@ MODULES.interviews = {
         };
 
         const testCell = (r) => {
-            if (r.test_template) {
+            // Score ja registado (submetido manualmente ou via link)
+            if (r.test_submitted_at || (r.test_score !== null && r.test_score !== undefined)) {
                 const tpl = this.TESTS[r.test_template];
                 const name = tpl ? tpl.title.split('—')[0].trim() : r.test_template;
                 const scoreColor = r.test_score >= 70 ? '#10b981' : r.test_score >= 50 ? '#f59e0b' : '#dc2626';
-                return `<div style="font-size:12px;"><strong style="color:${scoreColor};">${r.test_score}%</strong> <span style="color:var(--ink-500);">(${r.test_correct}/${r.test_total})</span><div style="font-size:10px; color:var(--ink-500);">${escape(name)}</div></div>`;
+                const via = r.test_submitted_at && r.test_access_token ? ' · via link' : ' · presencial';
+                return `<div style="font-size:12px;"><strong style="color:${scoreColor};">${r.test_score}%</strong> <span style="color:var(--ink-500);">(${r.test_correct}/${r.test_total})</span><div style="font-size:10px; color:var(--ink-500);">${escape(name)}${via}</div></div>`;
             }
+            // Link gerado, aguarda submissao
+            if (r.test_access_token) {
+                const tpl = this.TESTS[r.test_template];
+                const name = tpl ? tpl.title.split('—')[0].trim() : r.test_template;
+                const inProgress = !!r.test_started_at;
+                const color = inProgress ? '#f59e0b' : '#0ea5e9';
+                const label = inProgress ? 'Em curso' : 'Aguarda';
+                return `<div style="font-size:12px; cursor:pointer;" onclick="event.stopPropagation(); MODULES.interviews.copyTestLink('${r.test_access_token}')">
+                    <span style="color:${color}; font-weight:600;">⏳ ${label}</span>
+                    <div style="font-size:10px; color:var(--ink-500);">${escape(name)} · clica p/ copiar link</div>
+                </div>`;
+            }
+            // Sem teste
             return `<button class="btn-icon" style="color:var(--brand-600);" onclick="event.stopPropagation(); MODULES.interviews.startTest(${r.id})" title="Aplicar teste"><i class="codicon codicon-play"></i></button>`;
         };
 
@@ -488,17 +503,95 @@ MODULES.interviews = {
     // === FLUXO DE TESTE ===
     startTest(interviewId) {
         const content = `
-            <p style="margin-bottom:14px; color:var(--ink-600);">Escolha o teste a aplicar ao candidato:</p>
+            <p style="margin-bottom:14px; color:var(--ink-600);"><strong>1.</strong> Escolha o teste a aplicar:</p>
             ${Object.entries(this.TESTS).map(([key, t]) => `
-                <div style="border:1px solid var(--ink-200); border-radius:8px; padding:14px; margin-bottom:10px; cursor:pointer;" onclick="MODULES.interviews.openTest(${interviewId}, '${key}')">
+                <div style="border:1px solid var(--ink-200); border-radius:8px; padding:14px; margin-bottom:10px;">
                     <div style="font-weight:600; margin-bottom:4px;">${t.title}</div>
-                    <div style="font-size:13px; color:var(--ink-600);">${t.description}</div>
+                    <div style="font-size:13px; color:var(--ink-600); margin-bottom:10px;">${t.description}</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-outline btn-sm" onclick="MODULES.interviews.openTest(${interviewId}, '${key}')">
+                            <i class="codicon codicon-edit"></i> Aplicar Presencialmente
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="MODULES.interviews.generateLinkForCandidate(${interviewId}, '${key}')">
+                            <i class="codicon codicon-link"></i> Gerar Link para o Candidato
+                        </button>
+                    </div>
                 </div>
             `).join('')}
+            <div style="background:var(--ink-50); padding:12px; border-radius:6px; font-size:13px; color:var(--ink-600); margin-top:10px;">
+                <i class="codicon codicon-info"></i>
+                <strong>Presencial:</strong> tu marcas as respostas enquanto o candidato responde verbalmente.<br>
+                <i class="codicon codicon-info"></i>
+                <strong>Link:</strong> o candidato recebe um URL e responde sozinho. O score é registado automaticamente.
+            </div>
         `;
-        UI.createModal('Escolher Teste', content, `
+        UI.createModal('Como aplicar o teste?', content, `
             <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
         `);
+    },
+
+    async generateLinkForCandidate(interviewId, templateKey) {
+        try {
+            UI.showLoading();
+            const r = await API.interviews.generateTestLink(interviewId, templateKey);
+            UI.hideLoading();
+            const fullUrl = window.location.origin + r.relative_url;
+            const tplName = this.TESTS[templateKey]?.title || templateKey;
+            const content = `
+                <div class="alert alert-success">
+                    <i class="codicon codicon-check"></i>
+                    <span>Link gerado com sucesso!</span>
+                </div>
+                <p style="margin-bottom:8px;"><strong>Teste:</strong> ${tplName}</p>
+                <p style="margin-bottom:6px; color:var(--ink-700);">Envia este link ao candidato (e-mail, WhatsApp, etc.):</p>
+                <div style="background:var(--ink-50); padding:14px; border-radius:8px; word-break:break-all; font-family:monospace; font-size:13px; border:1px solid var(--ink-200);">
+                    ${fullUrl}
+                </div>
+                <div style="margin-top:12px; display:flex; gap:8px;">
+                    <button class="btn btn-primary btn-sm" onclick="MODULES.interviews._copyToClipboard('${fullUrl.replace(/'/g, "&#39;")}')">
+                        <i class="codicon codicon-copy"></i> Copiar Link
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="window.open('${fullUrl}', '_blank')">
+                        <i class="codicon codicon-link-external"></i> Abrir noutra Aba
+                    </button>
+                </div>
+                <div style="margin-top:14px; padding:12px; background:var(--warning-50); border-left:3px solid var(--warning); border-radius:6px; font-size:13px; color:#92400e;">
+                    <i class="codicon codicon-warning"></i>
+                    Cada link só pode ser usado <strong>uma vez</strong>. Após o candidato submeter, o score aparece automaticamente nesta entrevista.
+                </div>
+            `;
+            UI.createModal('Link de Teste do Candidato', content, `
+                <button class="btn btn-primary" onclick="UI.closeModal(); MODULES.interviews.loadData();">Fechar</button>
+            `);
+        } catch (e) {
+            UI.hideLoading();
+            UI.showToast(e.message || 'Erro ao gerar link', 'error');
+        }
+    },
+
+    copyTestLink(token) {
+        const fullUrl = window.location.origin + '/test.html?token=' + token;
+        this._copyToClipboard(fullUrl);
+        UI.showToast('Link copiado para a área de transferência', 'success');
+    },
+
+    _copyToClipboard(text) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).catch(() => this._copyFallback(text));
+        } else {
+            this._copyFallback(text);
+        }
+    },
+
+    _copyFallback(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch {}
+        document.body.removeChild(ta);
     },
 
     openTest(interviewId, templateKey) {

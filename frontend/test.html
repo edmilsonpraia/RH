@@ -3,273 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste - Sistema RH</title>
+    <title>Teste — Sistema RH COPIA GROUP</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons/dist/codicon.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 40px;
-            background: #f5f5f5;
-        }
-        .test-card {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .success { color: #28A745; font-weight: bold; }
-        .error { color: #DC3545; font-weight: bold; }
-        h1 { color: #8B4513; }
-        h2 { color: #A0522D; margin-top: 0; }
-        pre {
-            background: #f8f8f8;
-            padding: 15px;
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-        button {
-            background: #FF8C00;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background: #E67E00;
-        }
+        body { background: var(--ink-50); min-height: 100vh; padding: 24px 16px; }
+        .test-wrap { max-width: 820px; margin: 0 auto; }
+        .test-header { background: #fff; border-radius: 12px; padding: 24px 28px; box-shadow: var(--shadow-sm); margin-bottom: 18px; }
+        .test-header img { max-width: 140px; margin-bottom: 12px; }
+        .test-header h1 { font-size: 22px; color: var(--ink-900); margin-bottom: 4px; }
+        .test-header .subtitle { color: var(--ink-600); font-size: 14px; }
+        .test-card { background: #fff; border-radius: 12px; padding: 24px 28px; box-shadow: var(--shadow-sm); margin-bottom: 12px; }
+        .question { padding: 16px; border: 1px solid var(--ink-200); border-radius: 8px; margin-bottom: 10px; transition: border-color 0.15s; }
+        .question.answered { border-color: var(--brand-400); background: var(--brand-50); }
+        .question-num { color: var(--brand-700); font-weight: 700; margin-right: 6px; }
+        .question-text { font-size: 15px; line-height: 1.5; color: var(--ink-800); margin-bottom: 10px; }
+        .option-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+        .option-row:hover { background: var(--ink-100); }
+        .option-row input { margin-top: 3px; }
+        .option-row label { cursor: pointer; flex: 1; font-size: 14px; line-height: 1.4; }
+        .progress-bar { height: 8px; background: var(--ink-200); border-radius: 4px; overflow: hidden; margin: 16px 0 8px; }
+        .progress-fill { height: 100%; background: var(--brand-500); transition: width 0.3s ease; }
+        .actions-bar { position: sticky; bottom: 16px; background: #fff; border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 20px rgb(15 23 42 / 0.15); display: flex; align-items: center; gap: 14px; margin-top: 18px; }
+        .actions-bar .info { flex: 1; color: var(--ink-600); font-size: 14px; }
+        .result-card { text-align: center; padding: 40px 28px; }
+        .result-score { font-size: 56px; font-weight: 800; margin: 14px 0 4px; }
+        .result-card .label { font-size: 14px; color: var(--ink-500); text-transform: uppercase; letter-spacing: 0.5px; }
+        .alert-box { padding: 14px 16px; border-radius: 8px; margin-bottom: 16px; }
+        .alert-info { background: var(--info-50); color: #075985; border-left: 3px solid var(--info); }
     </style>
 </head>
 <body>
-    <h1>🔧 Página de Teste - Sistema RH COPIA GROUP</h1>
-
-    <div class="test-card">
-        <h2>1. Informações do Sistema</h2>
-        <p><strong>Data/Hora:</strong> <span id="datetime"></span></p>
-        <p><strong>URL:</strong> <span id="url"></span></p>
-        <p><strong>User Agent:</strong> <span id="useragent"></span></p>
-    </div>
-
-    <div class="test-card">
-        <h2>2. Teste de Servidor</h2>
-        <button onclick="testServer()">Testar Servidor</button>
-        <div id="serverResult"></div>
-    </div>
-
-    <div class="test-card">
-        <h2>3. Teste de Scripts JavaScript</h2>
-        <button onclick="testScripts()">Verificar Scripts</button>
-        <div id="scriptsResult"></div>
-    </div>
-
-    <div class="test-card">
-        <h2>4. Teste de Módulos</h2>
-        <button onclick="testModules()">Verificar Módulos</button>
-        <div id="modulesResult"></div>
-    </div>
-
-    <div class="test-card">
-        <h2>5. Teste de APIs</h2>
-        <button onclick="testAPIs()">Testar APIs</button>
-        <div id="apisResult"></div>
-    </div>
-
-    <div class="test-card">
-        <h2>6. Ações</h2>
-        <button onclick="clearCache()">Limpar Cache Local</button>
-        <button onclick="location.reload(true)">Hard Reload</button>
-        <button onclick="window.location.href='admin-dashboard.html'">Ir para Dashboard</button>
+    <div class="test-wrap" id="root">
+        <div class="test-card" style="text-align:center; padding:40px;">
+            <i class="codicon codicon-loading codicon-modifier-spin" style="font-size:32px; color:var(--brand-600);"></i>
+            <p style="margin-top:14px; color:var(--ink-600);">A carregar teste…</p>
+        </div>
     </div>
 
     <script>
-        // Informações básicas
-        document.getElementById('datetime').textContent = new Date().toLocaleString('pt-PT');
-        document.getElementById('url').textContent = window.location.href;
-        document.getElementById('useragent').textContent = navigator.userAgent;
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const root = document.getElementById('root');
+        let testData = null;
+        let answers = [];
 
-        // Declarar MODULES ANTES de carregar os scripts
-        const MODULES = {
-            employees: {},
-            users: {},
-            attendance: {},
-            leave: {},
-            recruitment: {},
-            onboarding: {},
-            payroll: {},
-            performance: {},
-            reports: {}
-        };
-    </script>
+        function escape(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
 
-    <script src="js/auth.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/components.js"></script>
-    <script src="js/employees.js"></script>
-    <script src="js/users.js"></script>
-    <script src="js/attendance.js"></script>
-    <script src="js/recruitment.js"></script>
-    <script src="js/onboarding.js"></script>
-    <script src="js/payroll.js"></script>
-    <script src="js/performance.js"></script>
-    <script src="js/reports.js"></script>
+        function renderError(msg) {
+            root.innerHTML = `
+                <div class="test-header" style="text-align:center;">
+                    <img src="assets/LOGO.png" alt="COPIA GROUP">
+                </div>
+                <div class="test-card" style="text-align:center;">
+                    <i class="codicon codicon-error" style="font-size:48px; color:var(--danger);"></i>
+                    <h2 style="margin:14px 0 8px;">Não foi possível abrir o teste</h2>
+                    <p style="color:var(--ink-600);">${escape(msg)}</p>
+                    <p style="color:var(--ink-500); font-size:13px; margin-top:14px;">
+                        Confirma o link recebido ou contacta o gestor de Capital Humano da COPIA GROUP.
+                    </p>
+                </div>
+            `;
+        }
 
-    <script>
+        async function loadTest() {
+            if (!token || token.length < 16) {
+                renderError('Link inválido (token em falta).');
+                return;
+            }
+            try {
+                const r = await fetch(`/api/interviews/test/${encodeURIComponent(token)}`);
+                const data = await r.json();
+                if (!r.ok) {
+                    if (data.alreadySubmitted) {
+                        renderError('Este teste já foi submetido. Cada link só pode ser usado uma vez.');
+                    } else {
+                        renderError(data.error || 'Erro ao carregar o teste.');
+                    }
+                    return;
+                }
+                testData = data;
+                answers = new Array(data.test.questions.length).fill(null);
+                renderIntro();
+            } catch (e) {
+                renderError('Erro de conexão. Verifica a tua internet e tenta novamente.');
+            }
+        }
 
-        async function testServer() {
-            const result = document.getElementById('serverResult');
-            result.innerHTML = '<p>Testando...</p>';
+        function renderIntro() {
+            const t = testData.test;
+            root.innerHTML = `
+                <div class="test-header" style="text-align:center;">
+                    <img src="assets/LOGO.png" alt="COPIA GROUP">
+                    <h1>${escape(t.title)}</h1>
+                    <div class="subtitle">COPIA GROUP — Capital Humano</div>
+                </div>
+                <div class="test-card">
+                    <h2 style="margin-bottom:8px;">Olá, ${escape(testData.candidateName)} 👋</h2>
+                    ${testData.positionTitle ? `<p style="color:var(--ink-600); margin-bottom:14px;">Candidatura para <strong>${escape(testData.positionTitle)}</strong></p>` : ''}
+                    <div class="alert-box alert-info">
+                        <strong><i class="codicon codicon-info"></i> Instruções</strong>
+                        <ul style="margin:8px 0 0 18px; line-height:1.6;">
+                            <li>Este teste tem <strong>${t.questions.length} perguntas</strong> (${t.type === 'vf' ? 'Verdadeiro / Falso' : 'múltipla escolha'}).</li>
+                            <li>Responde com calma. Não há limite de tempo.</li>
+                            <li>O teste só pode ser submetido <strong>uma vez</strong>.</li>
+                            <li>Após submeter, o resultado é enviado automaticamente para a equipa de RH.</li>
+                        </ul>
+                    </div>
+                    <p style="color:var(--ink-700);">${escape(t.description)}</p>
+                    <div style="text-align:center; margin-top:24px;">
+                        <button class="btn btn-primary btn-lg" onclick="renderTest()">
+                            <i class="codicon codicon-play"></i> Começar Teste
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTest() {
+            const t = testData.test;
+            const qsHtml = t.questions.map((q, idx) => {
+                if (t.type === 'vf') {
+                    return `
+                        <div class="question" id="q-${idx}">
+                            <div class="question-text"><span class="question-num">${idx + 1}.</span>${escape(q.q)}</div>
+                            <div class="option-row">
+                                <input type="radio" name="q${idx}" value="V" id="q${idx}V" onchange="setAnswer(${idx}, 'V')">
+                                <label for="q${idx}V">Verdadeiro</label>
+                            </div>
+                            <div class="option-row">
+                                <input type="radio" name="q${idx}" value="F" id="q${idx}F" onchange="setAnswer(${idx}, 'F')">
+                                <label for="q${idx}F">Falso</label>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="question" id="q-${idx}">
+                        <div class="question-text"><span class="question-num">${idx + 1}.</span>${escape(q.q)}</div>
+                        ${q.options.map((opt, oi) => `
+                            <div class="option-row">
+                                <input type="radio" name="q${idx}" value="${oi}" id="q${idx}o${oi}" onchange="setAnswer(${idx}, ${oi})">
+                                <label for="q${idx}o${oi}"><strong>${String.fromCharCode(65 + oi)})</strong> ${escape(opt)}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }).join('');
+
+            root.innerHTML = `
+                <div class="test-header">
+                    <h1>${escape(t.title)}</h1>
+                    <div class="subtitle">${escape(testData.candidateName)} ${testData.positionTitle ? '· ' + escape(testData.positionTitle) : ''}</div>
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+                    <div style="font-size:13px; color:var(--ink-500);" id="progressText">0 / ${t.questions.length} respondidas</div>
+                </div>
+                <div class="test-card">
+                    ${qsHtml}
+                </div>
+                <div class="actions-bar">
+                    <div class="info" id="bottomInfo">Responda a todas as perguntas e submeta abaixo.</div>
+                    <button class="btn btn-primary" onclick="submitTest()" id="submitBtn">
+                        <i class="codicon codicon-check"></i> Submeter Teste
+                    </button>
+                </div>
+            `;
+        }
+
+        function setAnswer(idx, value) {
+            answers[idx] = value;
+            const qEl = document.getElementById(`q-${idx}`);
+            if (qEl) qEl.classList.add('answered');
+            const answered = answers.filter(a => a !== null).length;
+            const total = answers.length;
+            const pct = (answered / total) * 100;
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressText').textContent = `${answered} / ${total} respondidas`;
+        }
+
+        async function submitTest() {
+            const answered = answers.filter(a => a !== null).length;
+            const total = answers.length;
+            if (answered === 0) {
+                alert('Marque pelo menos uma resposta antes de submeter.');
+                return;
+            }
+            if (answered < total) {
+                if (!confirm(`Apenas respondeu ${answered} de ${total} perguntas. As perguntas não respondidas contam como erradas. Submeter mesmo assim?`)) return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="codicon codicon-loading codicon-modifier-spin"></i> A submeter…';
 
             try {
-                const response = await fetch('/api/health');
-                const data = await response.json();
-
-                if (data.status === 'OK') {
-                    result.innerHTML = `
-                        <p class="success">✅ Servidor OK</p>
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                    `;
-                } else {
-                    result.innerHTML = `<p class="error">❌ Servidor respondeu mas status não é OK</p>`;
+                const r = await fetch(`/api/interviews/test/${encodeURIComponent(token)}/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answers })
+                });
+                const data = await r.json();
+                if (!r.ok) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="codicon codicon-check"></i> Submeter Teste';
+                    alert(data.error || 'Erro ao submeter. Tenta novamente.');
+                    return;
                 }
-            } catch (error) {
-                result.innerHTML = `<p class="error">❌ Erro: ${error.message}</p>`;
+                renderResult(data);
+            } catch (e) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="codicon codicon-check"></i> Submeter Teste';
+                alert('Erro de conexão ao submeter. Tenta novamente.');
             }
         }
 
-        function testScripts() {
-            const result = document.getElementById('scriptsResult');
-            const scripts = [
-                'auth.js',
-                'api.js',
-                'components.js',
-                'employees.js',
-                'users.js',
-                'attendance.js',
-                'recruitment.js',
-                'onboarding.js',
-                'payroll.js',
-                'performance.js',
-                'reports.js'
-            ];
+        function renderResult(r) {
+            const color = r.score >= 70 ? '#10b981' : r.score >= 50 ? '#f59e0b' : '#dc2626';
+            const message = r.score >= 70
+                ? 'Excelente desempenho! 🎉'
+                : r.score >= 50
+                ? 'Bom desempenho.'
+                : 'Obrigado pela participação.';
 
-            let html = '<table style="width: 100%; border-collapse: collapse;">';
-            html += '<tr><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Script</th><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Status</th></tr>';
-
-            scripts.forEach(script => {
-                const elements = document.querySelectorAll(`script[src*="${script}"]`);
-                const loaded = elements.length > 0;
-                html += `<tr>
-                    <td style="padding: 5px;">${script}</td>
-                    <td style="padding: 5px;">${loaded ? '<span class="success">✅ Carregado</span>' : '<span class="error">❌ Não encontrado</span>'}</td>
-                </tr>`;
-            });
-
-            html += '</table>';
-            result.innerHTML = html;
+            root.innerHTML = `
+                <div class="test-header" style="text-align:center;">
+                    <img src="assets/LOGO.png" alt="COPIA GROUP">
+                </div>
+                <div class="test-card result-card">
+                    <i class="codicon codicon-check" style="font-size:64px; color:${color};"></i>
+                    <h2 style="margin:14px 0 4px;">Teste submetido com sucesso</h2>
+                    <p style="color:var(--ink-600);">${escape(message)}</p>
+                    <div class="result-score" style="color:${color};">${r.score}%</div>
+                    <div class="label">${r.correct} de ${r.total} respostas corretas</div>
+                    <p style="margin-top:24px; color:var(--ink-600); font-size:14px;">
+                        A equipa de Capital Humano da COPIA GROUP foi notificada e entrará em contacto se necessário.
+                    </p>
+                </div>
+            `;
         }
 
-        function testModules() {
-            const result = document.getElementById('modulesResult');
-
-            const modules = [
-                'employees',
-                'users',
-                'attendance',
-                'leave',
-                'recruitment',
-                'onboarding',
-                'payroll',
-                'performance',
-                'reports'
-            ];
-
-            let html = '<table style="width: 100%; border-collapse: collapse;">';
-            html += '<tr><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Módulo</th><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Status</th></tr>';
-
-            modules.forEach(mod => {
-                const exists = typeof MODULES[mod] !== 'undefined';
-                const hasLoad = exists && typeof MODULES[mod].load === 'function';
-
-                let status = '';
-                if (!exists) {
-                    status = '<span class="error">❌ Não definido</span>';
-                } else if (!hasLoad) {
-                    status = '<span class="error">⚠️ Definido mas sem load()</span>';
-                } else {
-                    status = '<span class="success">✅ OK</span>';
-                }
-
-                html += `<tr>
-                    <td style="padding: 5px;">${mod}</td>
-                    <td style="padding: 5px;">${status}</td>
-                </tr>`;
-            });
-
-            html += '</table>';
-
-            html += '<br><pre>' + JSON.stringify(Object.keys(MODULES), null, 2) + '</pre>';
-
-            result.innerHTML = html;
-        }
-
-        async function testAPIs() {
-            const result = document.getElementById('apisResult');
-            result.innerHTML = '<p>Testando APIs...</p>';
-
-            const tests = [
-                { name: 'Health', url: '/api/health', needsAuth: false },
-                { name: 'Employees', url: '/api/employees', needsAuth: true },
-                { name: 'Users', url: '/api/users', needsAuth: true },
-                { name: 'Onboarding', url: '/api/onboarding', needsAuth: true },
-                { name: 'Reports Headcount', url: '/api/reports/headcount', needsAuth: true }
-            ];
-
-            let html = '<table style="width: 100%; border-collapse: collapse;">';
-            html += '<tr><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">API</th><th style="text-align: left; padding: 5px; border-bottom: 1px solid #ddd;">Status</th></tr>';
-
-            for (const test of tests) {
-                try {
-                    const response = await fetch(test.url);
-                    const status = response.status;
-
-                    let statusText = '';
-                    if (status === 200) {
-                        statusText = '<span class="success">✅ 200 OK</span>';
-                    } else if (status === 401 && test.needsAuth) {
-                        statusText = '<span class="success">✅ 401 (esperado, precisa login)</span>';
-                    } else {
-                        statusText = `<span class="error">❌ ${status}</span>`;
-                    }
-
-                    html += `<tr>
-                        <td style="padding: 5px;">${test.name}</td>
-                        <td style="padding: 5px;">${statusText}</td>
-                    </tr>`;
-                } catch (error) {
-                    html += `<tr>
-                        <td style="padding: 5px;">${test.name}</td>
-                        <td style="padding: 5px;"><span class="error">❌ ${error.message}</span></td>
-                    </tr>`;
-                }
-            }
-
-            html += '</table>';
-            result.innerHTML = html;
-        }
-
-        function clearCache() {
-            localStorage.clear();
-            sessionStorage.clear();
-            alert('Cache local limpo! Pressione Ctrl+Shift+R para hard reload.');
-        }
-
-        // Auto-executar testes ao carregar
-        window.addEventListener('load', () => {
-            testServer();
-            testScripts();
-            testModules();
-        });
+        loadTest();
     </script>
 </body>
 </html>

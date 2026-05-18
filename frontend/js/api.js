@@ -388,6 +388,9 @@ const API = {
         },
         submitTest(id, test_template, answers) {
             return API.post(`/interviews/${id}/test`, { test_template, answers });
+        },
+        generateTestLink(id, test_template) {
+            return API.post(`/interviews/${id}/generate-test-link`, { test_template });
         }
     },
 
