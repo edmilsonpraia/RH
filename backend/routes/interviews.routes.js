@@ -439,21 +439,21 @@ router.get('/my/pending', verifyToken, (req, res) => {
     const userEmail = (req.user.username || '').toLowerCase();
     const empId = req.user.employeeId;
 
+    // Match: candidate_email = username (caso signup) OU candidate_email = email do employee linkado
     db.all(
         `SELECT i.id, i.test_template, i.test_started_at, i.scheduled_at,
                 i.candidate_name_snapshot, r.candidate_name, r.candidate_email,
-                r.position_title, e.email as employee_email
+                r.position_title
          FROM interviews i
-         LEFT JOIN recruitment r ON i.candidate_id = r.id
-         LEFT JOIN employees e ON e.id = ?
+         JOIN recruitment r ON i.candidate_id = r.id
          WHERE i.test_template IS NOT NULL
            AND i.test_submitted_at IS NULL
            AND (
-                LOWER(COALESCE(r.candidate_email, '')) = ?
-                OR LOWER(COALESCE(e.email, '')) = ?
+                LOWER(r.candidate_email) = ?
+                OR LOWER(r.candidate_email) = (SELECT LOWER(email) FROM employees WHERE id = ?)
            )
          ORDER BY i.created_at DESC`,
-        [empId || 0, userEmail, userEmail],
+        [userEmail, empId || 0],
         async (err, rows) => {
             if (err) return res.status(500).json({ error: 'Erro: ' + err.message });
             // Enriquecer com info do template (sem respostas)
@@ -486,10 +486,9 @@ router.get('/my/:id(\\d+)', verifyToken, async (req, res) => {
     db.get(
         `SELECT i.id, i.test_template, i.test_submitted_at, i.candidate_name_snapshot,
                 r.candidate_name, r.candidate_email, r.position_title,
-                e.email as employee_email
+                (SELECT LOWER(email) FROM employees WHERE id = ?) as my_emp_email
          FROM interviews i
          LEFT JOIN recruitment r ON i.candidate_id = r.id
-         LEFT JOIN employees e ON e.id = ?
          WHERE i.id = ?`,
         [empId || 0, req.params.id],
         async (err, row) => {
@@ -497,8 +496,8 @@ router.get('/my/:id(\\d+)', verifyToken, async (req, res) => {
             if (!row) return res.status(404).json({ error: 'Não encontrada' });
 
             const candEmail = (row.candidate_email || '').toLowerCase();
-            const empEmail = (row.employee_email || '').toLowerCase();
-            if (candEmail !== userEmail && empEmail !== userEmail) {
+            const empEmail = (row.my_emp_email || '').toLowerCase();
+            if (candEmail !== userEmail && (!empEmail || candEmail !== empEmail)) {
                 return res.status(403).json({ error: 'Acesso negado' });
             }
             if (row.test_submitted_at) {
@@ -538,10 +537,10 @@ router.post('/my/:id(\\d+)/submit', verifyToken, async (req, res) => {
 
     db.get(
         `SELECT i.id, i.test_template, i.test_submitted_at,
-                r.candidate_email, e.email as employee_email
+                r.candidate_email,
+                (SELECT LOWER(email) FROM employees WHERE id = ?) as my_emp_email
          FROM interviews i
          LEFT JOIN recruitment r ON i.candidate_id = r.id
-         LEFT JOIN employees e ON e.id = ?
          WHERE i.id = ?`,
         [empId || 0, req.params.id],
         async (err, row) => {
@@ -549,8 +548,8 @@ router.post('/my/:id(\\d+)/submit', verifyToken, async (req, res) => {
             if (!row) return res.status(404).json({ error: 'Não encontrada' });
 
             const candEmail = (row.candidate_email || '').toLowerCase();
-            const empEmail = (row.employee_email || '').toLowerCase();
-            if (candEmail !== userEmail && empEmail !== userEmail) {
+            const empEmail = (row.my_emp_email || '').toLowerCase();
+            if (candEmail !== userEmail && (!empEmail || candEmail !== empEmail)) {
                 return res.status(403).json({ error: 'Acesso negado' });
             }
             if (row.test_submitted_at) {
